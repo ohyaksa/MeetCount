@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MeetCount - 집회 참석 집계 시스템</title>
+    <title>MeetCount - 집회 참석자 집계 시스템</title>
     <meta name="description" content="참석자 카운팅 / 집계 보조 사이트">
     <meta name="theme-color" content="#1e40af">
 
-    <!-- 오픈 그래프 미리보기 -->
+    <!-- 오픈 그래프 (카카오톡 등 링크 공유 미리보기 - 대소문자 MeetCount 반영) -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://ohyaksa.github.io/MeetCount/">
     <meta property="og:title" content="MeetCount">
@@ -16,7 +16,7 @@
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="400">
 
-    <!-- 홈 화면 아이콘 및 PWA 설정 -->
+    <!-- 홈 화면 아이콘 설정 -->
     <link rel="icon" type="image/png" href="./app-icon-meetcount.png">
     <link rel="apple-touch-icon" href="./app-icon-meetcount.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,10 +24,10 @@
     <meta name="apple-mobile-web-app-title" content="MeetCount">
     <meta name="mobile-web-app-capable" content="yes">
 
-    <!-- PWA 동적 매니페스트 생성 -->
+    <!-- 초기 로딩 중 클릭 오류 방지 프록시 및 PWA 매니페스트 -->
     <script>
         window.app = new Proxy({}, {
-            get: () => () => console.info("데이터베이스 모듈을 불러오는 중입니다...")
+            get: () => () => console.info("앱을 준비하고 있습니다...")
         });
 
         const manifestData = {
@@ -60,467 +60,665 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif; }
-        .touch-btn { touch-action: manipulation; user-select: none; }
-        .touch-btn:active { transform: scale(0.96); }
+        .touch-btn { touch-action: manipulation; user-select: none; transition: transform 0.08s ease; }
+        .touch-btn:active { transform: scale(0.95); }
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
-    <!-- ==================== 상단 공통 도움말 버튼 바 ==================== -->
-    <div class="max-w-xl w-full mx-auto px-3 pt-2 flex justify-end">
-        <a href="./help.html" target="_blank" class="inline-flex items-center gap-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm">
-            📖 사용설명서 보기
-        </a>
-    </div>
-
-    <!-- ==================== 1. PIN 암호 인증 화면 (상세/마스터 진입용) ==================== -->
-    <div id="auth-screen" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center border border-slate-100">
-            <img src="./app-icon-meetcount.png" alt="MeetCount" onerror="this.style.display='none'" class="w-16 h-16 mx-auto mb-3 rounded-2xl shadow-md">
-            <h1 class="text-2xl font-extrabold text-blue-700 tracking-tight">상세 / 마스터 로그인</h1>
-            <p class="text-xs text-slate-500 mt-1 mb-5">일반 암호(0000) 또는 마스터 암호(1935)를 입력하세요</p>
-
-            <div id="pin-display" class="text-3xl font-mono font-bold tracking-[0.5em] bg-slate-100 py-3.5 rounded-2xl mb-5 text-blue-700 border border-slate-200">
-                ••••
-            </div>
-
-            <div class="grid grid-cols-3 gap-2.5 mb-3">
-                <button type="button" onclick="app.pressPin('1')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">1</button>
-                <button type="button" onclick="app.pressPin('2')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">2</button>
-                <button type="button" onclick="app.pressPin('3')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">3</button>
-                <button type="button" onclick="app.pressPin('4')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">4</button>
-                <button type="button" onclick="app.pressPin('5')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">5</button>
-                <button type="button" onclick="app.pressPin('6')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">6</button>
-                <button type="button" onclick="app.pressPin('7')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">7</button>
-                <button type="button" onclick="app.pressPin('8')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">8</button>
-                <button type="button" onclick="app.pressPin('9')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">9</button>
-                <button type="button" onclick="app.clearPin()" class="touch-btn bg-rose-50 text-rose-600 hover:bg-rose-100 py-4 rounded-2xl text-sm font-bold">지움</button>
-                <button type="button" onclick="app.pressPin('0')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">0</button>
-                <button type="button" onclick="app.submitPin()" class="touch-btn bg-blue-600 text-white hover:bg-blue-700 py-4 rounded-2xl text-sm font-bold shadow-md">확인</button>
-            </div>
-            <div class="flex justify-between items-center mt-2">
-                <button type="button" onclick="app.closeAuthModal()" class="text-xs text-slate-500 font-bold hover:underline">취소 (쉬운 모드로 돌아가기)</button>
-                <p id="pin-error" class="text-xs text-rose-600 font-semibold"></p>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== 2. 메인 컨테이너 ==================== -->
-    <div class="flex-1 flex flex-col max-w-xl w-full mx-auto p-3 sm:p-4 pb-24">
-
-        <!-- 상단 헤더 & 회차 선택 바 -->
-        <header class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200/80 mb-3">
-            <div class="flex justify-between items-center mb-3">
-                <div class="flex items-center gap-2.5">
-                    <img src="./app-icon-meetcount.png" alt="Icon" onerror="this.style.display='none'" class="w-8 h-8 rounded-lg shadow-sm">
-                    <div>
-                        <div class="flex items-center gap-1.5">
-                            <h1 class="text-lg font-black text-blue-700 leading-none">MeetCount</h1>
-                            <span id="role-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold">쉬운 모드 (암호 없음)</span>
-                            <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-500" title="실시간 동기화 중"></span>
-                        </div>
-                        <p id="header-subtitle" class="text-[11px] text-slate-400 mt-0.5">참석자 카운팅 / 집계 보조 사이트</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-1.5">
-                    <button type="button" id="logout-btn" onclick="app.switchToEasyMode()" class="hidden touch-btn text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-2 rounded-xl font-bold">🔓 쉬운모드로</button>
-                    <button type="button" id="master-btn" onclick="app.openMasterModal()" class="hidden touch-btn text-xs bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-2 rounded-xl font-bold">⚙️ 마스터</button>
-                </div>
-            </div>
-
-            <!-- 회차 선택 드롭다운 -->
-            <div class="grid grid-cols-12 gap-2 pt-2 border-t border-slate-100">
-                <div class="col-span-5">
-                    <select id="month-selector" onchange="app.onMonthChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-2.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </select>
-                </div>
-                <div class="col-span-7">
-                    <select id="session-selector" onchange="app.onSessionChange()" class="w-full bg-blue-50/70 border border-blue-200 text-blue-900 rounded-xl px-2.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </select>
-                </div>
-            </div>
-        </header>
-
-        <!-- 상단 실시간 대시보드 요약 -->
-        <section class="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white p-4 rounded-2xl shadow-lg mb-4">
-            <div class="flex justify-between items-start border-b border-white/15 pb-3 mb-3">
+    <!-- ==================== 상단 공통 헤더 바 ==================== -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-xl w-full mx-auto px-3.5 py-2.5 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <img src="./app-icon-meetcount.png" alt="Icon" onerror="this.style.display='none'" class="w-8 h-8 rounded-xl shadow-sm">
                 <div>
                     <div class="flex items-center gap-1.5">
-                        <span class="text-xs text-blue-200 font-medium">총 참석자 (대면+비대면)</span>
-                        <span id="session-status-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white font-bold">정상</span>
-                        <button type="button" onclick="app.showHelpTooltip('total')" class="w-4 h-4 rounded-full bg-white/20 text-white text-[10px] font-bold flex items-center justify-center hover:bg-white/40" title="도움말">?</button>
+                        <span class="text-base font-black text-blue-700 tracking-tight">MeetCount</span>
+                        <span id="role-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold">쉬운 모드</span>
+                        <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-500" title="실시간 동기화 연결됨"></span>
                     </div>
-                    <div class="text-3xl font-black tracking-tight mt-0.5" id="dash-grand-total">0명</div>
-                </div>
-                <div class="text-right">
-                    <span class="text-xs text-blue-200 font-medium">전도인 <span id="dash-pub-count">100</span>명 기준</span>
-                    <div class="text-2xl font-extrabold text-amber-300 mt-0.5" id="dash-general-rate">0.0%</div>
+                    <p class="text-[10px] text-slate-400 leading-none mt-0.5">집회 참석자 실시간 집계 시스템</p>
                 </div>
             </div>
-            <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="bg-white/10 rounded-xl p-2">
-                    <div class="text-[11px] text-blue-200 flex items-center justify-center gap-1">
-                        대면 합계 <button type="button" onclick="app.showHelpTooltip('inperson')" class="w-3.5 h-3.5 rounded-full bg-white/20 text-white text-[9px] flex items-center justify-center">?</button>
-                    </div>
-                    <div class="text-base font-extrabold" id="dash-inperson">0명</div>
-                </div>
-                <div class="bg-white/10 rounded-xl p-2">
-                    <div class="text-[11px] text-blue-200 flex items-center justify-center gap-1">
-                        비대면 합계 <button type="button" onclick="app.showHelpTooltip('online')" class="w-3.5 h-3.5 rounded-full bg-white/20 text-white text-[9px] flex items-center justify-center">?</button>
-                    </div>
-                    <div class="text-base font-extrabold" id="dash-online">0명</div>
-                </div>
-                <div class="bg-white/10 rounded-xl p-2">
-                    <div class="text-[11px] text-blue-200 flex items-center justify-center gap-1">
-                        임시 참석자 <button type="button" onclick="app.showHelpTooltip('temp')" class="w-3.5 h-3.5 rounded-full bg-white/20 text-white text-[9px] flex items-center justify-center">?</button>
-                    </div>
-                    <div class="text-base font-extrabold" id="dash-temp">0명</div>
-                </div>
-            </div>
-        </section>
 
-        <!-- ==================== [뷰 A] 쉬운 모드 화면 (상단 2/3) ==================== -->
-        <div id="view-easy" class="space-y-4">
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
-                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
-                    <div>
-                        <h2 class="font-extrabold text-blue-700 text-base">🟢 쉬운 모드 (간편 입력)</h2>
-                        <p class="text-[11px] text-slate-400">당일 대면·비대면 총인원 간편 입력 및 수정</p>
-                    </div>
-                    <button type="button" onclick="app.openMonthStatsModal()" class="touch-btn bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-extrabold text-xs px-3 py-2 rounded-xl">📅 이번달 보기</button>
-                </div>
-
-                <!-- 대면 총인원 간편 입력 ((-) [숫자] (+) 배치) -->
-                <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 mb-3">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-extrabold text-slate-700">🏛️ 대면 참석자 총합</label>
-                        <button type="button" onclick="app.showHelpTooltip('easy-inperson')" class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold flex items-center justify-center">?</button>
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                        <button type="button" onclick="app.addEasyCount('inperson', -1)" class="touch-btn w-12 h-12 bg-slate-200 hover:bg-slate-300 rounded-xl font-black text-xl text-slate-700">-</button>
-                        <input type="number" id="easy-val-inperson" onchange="app.setEasyCountDirect('inperson', this.value)" class="flex-1 text-center font-black text-2xl bg-white border border-slate-200 rounded-xl py-2 text-blue-700" value="0">
-                        <button type="button" onclick="app.addEasyCount('inperson', 1)" class="touch-btn w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xl shadow-sm">+</button>
-                    </div>
-                </div>
-
-                <!-- 비대면 총인원 간편 입력 ((-) [숫자] (+) 배치) -->
-                <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 mb-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <label class="text-xs font-extrabold text-slate-700">💻 비대면 참석자 총합</label>
-                        <button type="button" onclick="app.showHelpTooltip('easy-online')" class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[10px] font-bold flex items-center justify-center">?</button>
-                    </div>
-                    <div class="flex items-center justify-between gap-2">
-                        <button type="button" onclick="app.addEasyCount('online', -1)" class="touch-btn w-12 h-12 bg-slate-200 hover:bg-slate-300 rounded-xl font-black text-xl text-slate-700">-</button>
-                        <input type="number" id="easy-val-online" onchange="app.setEasyCountDirect('online', this.value)" class="flex-1 text-center font-black text-2xl bg-white border border-slate-200 rounded-xl py-2 text-indigo-700" value="0">
-                        <button type="button" onclick="app.addEasyCount('online', 1)" class="touch-btn w-12 h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-xl shadow-sm">+</button>
-                    </div>
-                </div>
-
-                <!-- 실시간 총합계 표시 -->
-                <div class="bg-blue-50 border-2 border-blue-200 p-3.5 rounded-2xl flex justify-between items-center mb-3">
-                    <span class="font-extrabold text-blue-900 text-sm">📌 총 참석 합계 (대면+비대면)</span>
-                    <span class="text-2xl font-black text-blue-700" id="easy-grand-total">0명</span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="app.saveEasySession()" class="touch-btn bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-sm">💾 당일 내역 저장</button>
-                    <button type="button" onclick="app.unlockEditMode()" class="touch-btn bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-xl font-extrabold text-xs">✏️ 수정 모드 활성화</button>
-                </div>
-                <p class="text-[11px] text-slate-400 text-center mt-2" id="easy-mode-notice">※ 당일 내역은 언제든 저장·수정 가능합니다. 지난 날짜는 보기만 가능합니다.</p>
-            </div>
-
-            <!-- 하단 상세/마스터 모드 진입부 (하단 1/3) -->
-            <div class="bg-slate-800 text-white p-4 rounded-2xl shadow-md text-center">
-                <h3 class="text-xs font-bold text-slate-300 mb-1.5">🔒 상세 모드 및 마스터 관리자 입장</h3>
-                <p class="text-[11px] text-slate-400 mb-3">구역별 세부 입력(연단, 좌·중·우 청중석, 기타) 및 마스터 권한</p>
-                <button type="button" onclick="app.openAuthModal()" class="touch-btn w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-md">🔑 암호 입력하고 상세/마스터 모드 진입</button>
+            <div class="flex items-center gap-1.5">
+                <button type="button" id="btn-go-easy" onclick="app.switchToEasyMode()" class="hidden touch-btn text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-xl font-extrabold">
+                    🟢 쉬운모드
+                </button>
+                <button type="button" id="btn-open-master" onclick="app.openMasterModal()" class="hidden touch-btn text-xs bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-1.5 rounded-xl font-extrabold">
+                    ⚙️ 설정
+                </button>
+                <a href="./help.html" class="touch-btn inline-flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-extrabold px-2.5 py-1.5 rounded-xl">
+                    📖 도움말
+                </a>
             </div>
         </div>
+    </header>
 
-        <!-- ==================== [뷰 B] 하이브리드 / 마스터 상세 모드 화면 ==================== -->
-        <div id="view-detailed" class="hidden space-y-4">
-            
-            <!-- 회관 구조 맞춤형 대면 구역별 입력 (3열 청중석 그리드 및 색상 구분, (-) [숫자] (+) 배치) -->
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+    <!-- ==================== 메인 래퍼 ==================== -->
+    <main class="flex-1 max-w-xl w-full mx-auto p-3 sm:p-4 pb-16 flex flex-col gap-4">
+
+        <!-- ===================================================================== -->
+        <!-- [화면 1] 첫 화면: 상단 2/3 쉬운 모드 + 하단 1/3 기존 상세화면 입장코드 -->
+        <!-- ===================================================================== -->
+        <div id="screen-easy" class="flex flex-col gap-4">
+
+            <!-- ▶ 상단 2/3 영역: 쉬운 모드 (암호 없음) -->
+            <section class="bg-white rounded-3xl shadow-md border-2 border-emerald-500/80 p-4 sm:p-5">
+                <div class="flex justify-between items-center pb-3 mb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <h2 class="text-base font-black text-slate-800">쉬운 모드 (간편 입력)</h2>
+                        <button type="button" onclick="app.showHelp('easy_mode')" class="w-5 h-5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-extrabold flex items-center justify-center">?</button>
+                    </div>
+                    <span id="easy-month-badge" class="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">이번 달</span>
+                </div>
+
+                <!-- 집회 구분 선택 (이번 달 평일/주말 집회) -->
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label for="easy-session-selector" class="text-xs font-extrabold text-slate-600 flex items-center gap-1">
+                            📌 집회 구분 선택 (평일 / 주말)
+                            <button type="button" onclick="app.showHelp('easy_session')" class="w-4 h-4 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold inline-flex items-center justify-center">?</button>
+                        </label>
+                        <span id="easy-category-pill" class="text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700">평일집회</span>
+                    </div>
+                    <select id="easy-session-selector" onchange="app.onEasySessionChange(this.value)" class="w-full bg-slate-50 border-2 border-slate-200 text-slate-800 rounded-2xl px-3 py-2.5 text-sm font-extrabold focus:outline-none focus:border-emerald-500">
+                    </select>
+                </div>
+
+                <!-- 수정 가능 여부 상태 알림줄 -->
+                <div id="easy-lock-notice" class="mb-3 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 text-center">
+                    🟢 현재 회차는 실시간 입력 및 수정이 가능합니다.
+                </div>
+
+                <!-- 대면 / 비대면 나란히 2열 배치 ((-) [숫자] (+)) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    <!-- 대면 집회 -->
+                    <div class="bg-blue-50/70 border-2 border-blue-200 rounded-2xl p-3.5 text-center">
+                        <div class="flex justify-center items-center gap-1 mb-2">
+                            <span class="text-sm font-black text-blue-900">🏛️ 대면 집회</span>
+                            <button type="button" onclick="app.showHelp('easy_inperson')" class="w-4 h-4 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center">?</button>
+                        </div>
+                        <div class="flex items-center justify-between gap-1.5">
+                            <button type="button" id="btn-easy-ip-minus" onclick="app.adjustEasyInput('inperson', -1)" class="touch-btn w-12 h-12 rounded-2xl bg-white border-2 border-blue-200 hover:bg-blue-100 text-blue-800 font-black text-2xl shadow-sm">-</button>
+                            <input type="number" id="easy-input-inperson" oninput="app.onEasyDirectInput()" class="w-full h-12 text-center font-black text-2xl bg-white border-2 border-blue-300 rounded-2xl text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500" value="0" min="0">
+                            <button type="button" id="btn-easy-ip-plus" onclick="app.adjustEasyInput('inperson', 1)" class="touch-btn w-12 h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-2xl shadow-sm">+</button>
+                        </div>
+                    </div>
+
+                    <!-- 비대면 집회 -->
+                    <div class="bg-indigo-50/70 border-2 border-indigo-200 rounded-2xl p-3.5 text-center">
+                        <div class="flex justify-center items-center gap-1 mb-2">
+                            <span class="text-sm font-black text-indigo-900">💻 비대면 집회</span>
+                            <button type="button" onclick="app.showHelp('easy_online')" class="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center">?</button>
+                        </div>
+                        <div class="flex items-center justify-between gap-1.5">
+                            <button type="button" id="btn-easy-on-minus" onclick="app.adjustEasyInput('online', -1)" class="touch-btn w-12 h-12 rounded-2xl bg-white border-2 border-indigo-200 hover:bg-indigo-100 text-indigo-800 font-black text-2xl shadow-sm">-</button>
+                            <input type="number" id="easy-input-online" oninput="app.onEasyDirectInput()" class="w-full h-12 text-center font-black text-2xl bg-white border-2 border-indigo-300 rounded-2xl text-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" value="0" min="0">
+                            <button type="button" id="btn-easy-on-plus" onclick="app.adjustEasyInput('online', 1)" class="touch-btn w-12 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-2xl shadow-sm">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 합계 (자동 계산) -->
+                <div class="bg-slate-900 text-white rounded-2xl p-3.5 mb-4 flex justify-between items-center shadow-inner">
+                    <span class="text-sm font-extrabold text-slate-200">📌 합계 (대면 + 비대면 자동합산)</span>
+                    <div class="text-2xl font-black text-amber-300"><span id="easy-total-sum">0</span>명</div>
+                </div>
+
+                <!-- "저장" / "수정" / "이번달보기" 3개 핵심 버튼 -->
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" id="btn-easy-save" onclick="app.saveEasyMode()" class="touch-btn bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-black text-sm shadow-md">
+                        💾 저장
+                    </button>
+                    <button type="button" id="btn-easy-edit" onclick="app.enableEasyEdit()" class="touch-btn bg-amber-500 hover:bg-amber-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-md">
+                        ✏️ 수정
+                    </button>
+                    <button type="button" onclick="app.toggleEasyMonthlyModal()" class="touch-btn bg-slate-700 hover:bg-slate-800 text-white py-3.5 rounded-2xl font-black text-sm shadow-md">
+                        📅 이번달보기
+                    </button>
+                </div>
+            </section>
+
+            <!-- ▶ 구분선 -->
+            <div class="relative flex py-1 items-center">
+                <div class="flex-grow border-t-2 border-dashed border-slate-300"></div>
+                <span class="flex-shrink mx-3 text-xs font-extrabold text-slate-400">상세 구역 입력 및 관리자 전용</span>
+                <div class="flex-grow border-t-2 border-dashed border-slate-300"></div>
+            </div>
+
+            <!-- ▶ 하단 1/3 영역: 기존 화면(하이브리드 / 마스터) 입장코드 -->
+            <section class="bg-slate-800 text-white rounded-3xl shadow-lg p-4 sm:p-5 border border-slate-700">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-sm font-black text-amber-300">🔒 상세 화면 입장코드 입력</span>
+                        <button type="button" onclick="app.showHelp('pin_roles')" class="w-5 h-5 rounded-full bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center">?</button>
+                    </div>
+                    <span class="text-[11px] text-slate-300">일반(하이브리드): <b>0000</b> / 마스터: <b>1935</b></span>
+                </div>
+
+                <!-- 암호 표시창 및 바로 입장 버튼 -->
+                <div class="flex gap-2 mb-3">
+                    <input type="password" id="pin-direct-input" inputmode="numeric" maxlength="4" placeholder="•••• (4자리 입력)" oninput="app.onPinInputDirect(this.value)" onkeydown="if(event.key==='Enter') app.submitPin()" class="flex-1 bg-slate-900 border border-slate-600 rounded-2xl px-4 py-3 text-center text-xl font-mono font-black tracking-[0.4em] text-amber-300 focus:outline-none focus:border-blue-400">
+                    <button type="button" onclick="app.submitPin()" class="touch-btn bg-blue-600 hover:bg-blue-500 text-white px-5 rounded-2xl font-black text-sm shadow-md">
+                        입장 ➔
+                    </button>
+                </div>
+
+                <!-- 터치형 숫자 키패드 (스마트폰 원터치용) -->
+                <div class="grid grid-cols-6 gap-1.5">
+                    <button type="button" onclick="app.pressPin('1')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">1</button>
+                    <button type="button" onclick="app.pressPin('2')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">2</button>
+                    <button type="button" onclick="app.pressPin('3')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">3</button>
+                    <button type="button" onclick="app.pressPin('4')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">4</button>
+                    <button type="button" onclick="app.pressPin('5')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">5</button>
+                    <button type="button" onclick="app.clearPin()" class="touch-btn bg-rose-600/80 hover:bg-rose-600 py-2.5 rounded-xl font-extrabold text-xs">지움</button>
+                    <button type="button" onclick="app.pressPin('6')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">6</button>
+                    <button type="button" onclick="app.pressPin('7')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">7</button>
+                    <button type="button" onclick="app.pressPin('8')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">8</button>
+                    <button type="button" onclick="app.pressPin('9')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">9</button>
+                    <button type="button" onclick="app.pressPin('0')" class="touch-btn bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-extrabold text-sm">0</button>
+                    <button type="button" onclick="app.submitPin()" class="touch-btn bg-blue-600 hover:bg-blue-500 py-2.5 rounded-xl font-extrabold text-xs">확인</button>
+                </div>
+                <p id="pin-error" class="text-xs text-rose-400 font-bold text-center mt-2 min-h-[1rem]"></p>
+            </section>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- [화면 2] 상세 화면 (하이브리드 0000 / 마스터 1935 고정 페이지)        -->
+        <!-- ===================================================================== -->
+        <div id="screen-detailed" class="hidden flex-col gap-4">
+
+            <!-- 월 선택 및 회차 선택 바 -->
+            <section class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200">
+                <div class="grid grid-cols-12 gap-2">
+                    <div class="col-span-5">
+                        <label class="text-[10px] font-bold text-slate-400 block mb-1">조회 년월 <span id="month-lock-hint" class="text-blue-600">(이번달)</span></label>
+                        <select id="month-selector" onchange="app.onMonthChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-2.5 py-2 text-xs font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </select>
+                    </div>
+                    <div class="col-span-7">
+                        <label class="text-[10px] font-bold text-slate-400 block mb-1">집회 날짜 및 평일/주말 구분</label>
+                        <select id="session-selector" onchange="app.onSessionChange()" class="w-full bg-blue-50 border border-blue-200 text-blue-900 rounded-xl px-2.5 py-2 text-xs font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 상단 실시간 통합 대시보드 -->
+            <section class="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white p-4 rounded-2xl shadow-lg">
+                <div class="flex justify-between items-start border-b border-white/15 pb-3 mb-3">
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-blue-200 font-semibold">총 참석자 (대면+비대면)</span>
+                            <span id="dash-status-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white font-bold">정상</span>
+                            <button type="button" onclick="app.showHelp('dash_total')" class="w-4 h-4 rounded-full bg-white/20 text-white text-[10px] font-bold flex items-center justify-center">?</button>
+                        </div>
+                        <div class="text-3xl font-black tracking-tight mt-0.5" id="dash-grand-total">0명</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="flex items-center justify-end gap-1">
+                            <span class="text-xs text-blue-200 font-semibold">전도인 <span id="dash-pub-count">100</span>명 대비</span>
+                            <button type="button" onclick="app.showHelp('dash_general_rate')" class="w-4 h-4 rounded-full bg-white/20 text-white text-[10px] font-bold flex items-center justify-center">?</button>
+                        </div>
+                        <div class="text-2xl font-extrabold text-amber-300 mt-0.5" id="dash-general-rate">0.0%</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 text-center mb-3">
+                    <div class="bg-white/10 rounded-xl p-2">
+                        <div class="text-[11px] text-blue-200">대면 합계</div>
+                        <div class="text-base font-extrabold" id="dash-inperson">0명</div>
+                        <div class="text-[10px] text-blue-200/80" id="dash-seat-sub">청중석 0명</div>
+                    </div>
+                    <div class="bg-white/10 rounded-xl p-2">
+                        <div class="text-[11px] text-blue-200">비대면 합계</div>
+                        <div class="text-base font-extrabold" id="dash-online">0명</div>
+                        <div class="text-[10px] text-blue-200/80" id="dash-online-dev">기기 0대</div>
+                    </div>
+                    <div class="bg-white/10 rounded-xl p-2">
+                        <div class="text-[11px] text-blue-200">임시 참석자</div>
+                        <div class="text-base font-extrabold" id="dash-temp">0명</div>
+                        <div class="text-[10px] text-blue-200/80">마스터 입력</div>
+                    </div>
+                </div>
+
+                <!-- 실질 참석 통계 (마스터 모수 연동) -->
+                <div class="bg-slate-900/40 rounded-xl p-2.5 text-xs space-y-1 border border-white/10">
+                    <div class="flex justify-between items-center">
+                        <span class="text-blue-100 flex items-center gap-1">
+                            • 대면 실질 참석률 <span class="text-[10px] text-blue-300" id="dash-real-ip-formula"></span>
+                            <button type="button" onclick="app.showHelp('real_inperson')" class="w-3.5 h-3.5 rounded-full bg-white/20 text-white text-[9px] flex items-center justify-center">?</button>
+                        </span>
+                        <span class="font-extrabold text-emerald-300" id="dash-real-ip-rate">0.0%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-blue-100 flex items-center gap-1">
+                            • 전체 실질 참석률 <span class="text-[10px] text-blue-300" id="dash-real-tot-formula"></span>
+                            <button type="button" onclick="app.showHelp('real_total')" class="w-3.5 h-3.5 rounded-full bg-white/20 text-white text-[9px] flex items-center justify-center">?</button>
+                        </span>
+                        <span class="font-extrabold text-emerald-300" id="dash-real-tot-rate">0.0%</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 과거 날짜 수정 제한 / 집회 없음 안내 배너 -->
+            <div id="detailed-lock-banner" class="hidden bg-rose-50 border-2 border-rose-300 text-rose-800 p-3 rounded-2xl text-xs font-extrabold text-center">
+                🔒 당일이 지난 예전 기록입니다. (수정은 마스터 관리자만 가능합니다)
+            </div>
+            <div id="no-meeting-banner" class="hidden bg-amber-50 border-2 border-amber-300 text-amber-900 p-3.5 rounded-2xl text-center">
+                <div class="font-extrabold text-sm">🚫 이번 회차는 ‘집회 없음(기록 제외)’ 상태입니다.</div>
+                <p class="text-xs text-amber-700 mt-0.5" id="no-meeting-reason">월평균 계산 분모에서 자동 제외됩니다.</p>
+            </div>
+
+            <!-- 🏛️ 회관 실제 구조 맞춤형 대면 카운터 -->
+            <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
-                    <div>
-                        <h2 class="font-extrabold text-slate-800 text-base" id="detailed-title">🏛️ 대면 구역별 세부 카운터</h2>
-                        <p class="text-[11px] text-slate-400">회관 실제 구조에 맞춘 구역별 인원 직접 입력</p>
+                    <div class="flex items-center gap-1.5">
+                        <h2 class="font-extrabold text-slate-800 text-base">🏛️ 회관 구조별 대면 카운터</h2>
+                        <button type="button" onclick="app.showHelp('hall_layout')" class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center">?</button>
                     </div>
-                    <span class="bg-blue-50 text-blue-700 font-extrabold text-xs px-2.5 py-1 rounded-lg" id="label-inperson-sum">대면 소계: 0명</span>
+                    <span class="bg-blue-50 text-blue-700 font-extrabold text-xs px-2.5 py-1 rounded-lg" id="label-inperson-sum">대면 합계: 0명</span>
                 </div>
 
-                <!-- 1. 가장 앞쪽 연단 -->
-                <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 mb-3 flex justify-between items-center">
+                <!-- [앞쪽] 1. 연단 (상단 중앙) -->
+                <div class="bg-indigo-50/70 border-2 border-indigo-200 rounded-2xl p-3 mb-3 flex justify-between items-center">
                     <div>
-                        <span class="text-xs font-extrabold text-slate-700">1. 가장 앞쪽 연단</span>
-                        <span class="text-[11px] text-slate-400 block">연사 및 사회자</span>
+                        <span class="text-xs font-black text-indigo-950">1. 가장 앞쪽: 연단</span>
+                        <span class="text-[11px] text-indigo-600 block">연사 및 사회자</span>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button" onclick="app.addZone('platform', -1)" class="touch-btn w-10 h-10 bg-slate-200 hover:bg-slate-300 rounded-xl font-extrabold text-lg text-slate-700">-</button>
-                        <input type="number" id="val-platform" onchange="app.setZoneDirect('platform', this.value)" class="w-14 text-center font-extrabold text-lg bg-white border border-slate-200 rounded-xl py-1.5" value="0">
-                        <button type="button" onclick="app.addZone('platform', 1)" class="touch-btn w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold text-lg shadow-sm">+</button>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="app.addZone('platform', -1)" class="touch-btn w-10 h-10 bg-white border border-indigo-200 rounded-xl font-black text-lg text-indigo-900">-</button>
+                        <input type="number" id="val-platform" onchange="app.setZoneDirect('platform', this.value)" class="w-14 h-10 text-center font-black text-lg bg-white border border-indigo-300 rounded-xl text-indigo-900" value="0" min="0">
+                        <button type="button" onclick="app.addZone('platform', 1)" class="touch-btn w-10 h-10 bg-indigo-600 text-white rounded-xl font-black text-lg shadow-sm">+</button>
                     </div>
                 </div>
 
-                <!-- 2. 청중석 3칸 그리드 (왼쪽 4칸 / 가운데 6칸 / 오른쪽 4칸 + 배경색 구분) -->
-                <div class="bg-blue-50/40 border border-blue-200/80 rounded-2xl p-3 mb-3">
-                    <div class="text-xs font-extrabold text-blue-900 mb-2">2. 청중석 (좌·중·우 독립 입력)</div>
+                <!-- [중간 홀] 2. 청중석 3칸 분할 (왼쪽 4칸 / 가운데 6칸 / 오른쪽 4칸 - 배경색 구분) -->
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-1.5 px-1">
+                        <span class="text-xs font-extrabold text-slate-700">2. 청중석 3구역 (좌 4칸 · 중 6칸 · 우 4칸)</span>
+                        <span class="text-xs font-bold text-blue-700" id="label-seats-sum">청중석 소계: 0명</span>
+                    </div>
                     <div class="grid grid-cols-3 gap-2">
-                        <!-- 왼쪽 청중석 (4칸) - 연한 하늘색 배경 -->
-                        <div class="bg-sky-50 border-2 border-sky-200 rounded-xl p-2.5 text-center shadow-sm">
-                            <div class="text-[11px] font-extrabold text-sky-900 mb-1">왼쪽 (4칸)</div>
-                            <div class="flex items-center justify-between gap-1 mb-1.5">
-                                <button type="button" onclick="app.addZone('seatLeft', -1)" class="touch-btn w-7 h-8 bg-white border border-sky-200 rounded-lg font-bold text-sm">-</button>
-                                <input type="number" id="val-seatLeft" onchange="app.setZoneDirect('seatLeft', this.value)" class="w-10 text-center font-black text-base bg-white border border-sky-200 rounded-lg py-1 text-sky-800" value="0">
-                                <button type="button" onclick="app.addZone('seatLeft', 1)" class="touch-btn w-7 h-8 bg-sky-600 text-white rounded-lg font-bold text-sm">+</button>
+                        <!-- 왼쪽 청중석 (4칸) - 하늘색 배경 -->
+                        <div class="bg-sky-100/80 border-2 border-sky-300 rounded-2xl p-2.5 text-center shadow-sm">
+                            <div class="text-xs font-black text-sky-950">왼쪽 청중석</div>
+                            <div class="text-[10px] font-bold text-sky-700 mb-2">(창가쪽 · 4칸)</div>
+                            <div class="flex items-center justify-between gap-1">
+                                <button type="button" onclick="app.addZone('seatLeft', -1)" class="touch-btn w-8 h-9 bg-white border border-sky-300 rounded-xl font-black text-base text-sky-900">-</button>
+                                <input type="number" id="val-seatLeft" onchange="app.setZoneDirect('seatLeft', this.value)" class="w-full h-9 text-center font-black text-base bg-white border border-sky-300 rounded-xl text-sky-950" value="0" min="0">
+                                <button type="button" onclick="app.addZone('seatLeft', 1)" class="touch-btn w-8 h-9 bg-sky-600 text-white rounded-xl font-black text-base shadow-sm">+</button>
                             </div>
                         </div>
 
-                        <!-- 가운데 청중석 (6칸) - 연한 보라색 배경 -->
-                        <div class="bg-purple-50 border-2 border-purple-200 rounded-xl p-2.5 text-center shadow-sm">
-                            <div class="text-[11px] font-extrabold text-purple-900 mb-1">가운데 (6칸)</div>
-                            <div class="flex items-center justify-between gap-1 mb-1.5">
-                                <button type="button" onclick="app.addZone('seatCenter', -1)" class="touch-btn w-7 h-8 bg-white border border-purple-200 rounded-lg font-bold text-sm">-</button>
-                                <input type="number" id="val-seatCenter" onchange="app.setZoneDirect('seatCenter', this.value)" class="w-10 text-center font-black text-base bg-white border border-purple-200 rounded-lg py-1 text-purple-800" value="0">
-                                <button type="button" onclick="app.addZone('seatCenter', 1)" class="touch-btn w-7 h-8 bg-purple-600 text-white rounded-lg font-bold text-sm">+</button>
+                        <!-- 가운데 청중석 (6칸) - 보라색 배경 -->
+                        <div class="bg-violet-100/80 border-2 border-violet-300 rounded-2xl p-2.5 text-center shadow-sm">
+                            <div class="text-xs font-black text-violet-950">가운데 청중석</div>
+                            <div class="text-[10px] font-bold text-violet-700 mb-2">(중앙열 · 6칸)</div>
+                            <div class="flex items-center justify-between gap-1">
+                                <button type="button" onclick="app.addZone('seatCenter', -1)" class="touch-btn w-8 h-9 bg-white border border-violet-300 rounded-xl font-black text-base text-violet-900">-</button>
+                                <input type="number" id="val-seatCenter" onchange="app.setZoneDirect('seatCenter', this.value)" class="w-full h-9 text-center font-black text-base bg-white border border-violet-300 rounded-xl text-violet-950" value="0" min="0">
+                                <button type="button" onclick="app.addZone('seatCenter', 1)" class="touch-btn w-8 h-9 bg-violet-600 text-white rounded-xl font-black text-base shadow-sm">+</button>
                             </div>
                         </div>
 
-                        <!-- 오른쪽 청중석 (4칸) - 연한 민트색 배경 -->
-                        <div class="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-2.5 text-center shadow-sm">
-                            <div class="text-[11px] font-extrabold text-emerald-900 mb-1">오른쪽 (4칸)</div>
-                            <div class="flex items-center justify-between gap-1 mb-1.5">
-                                <button type="button" onclick="app.addZone('seatRight', -1)" class="touch-btn w-7 h-8 bg-white border border-emerald-200 rounded-lg font-bold text-sm">-</button>
-                                <input type="number" id="val-seatRight" onchange="app.setZoneDirect('seatRight', this.value)" class="w-10 text-center font-black text-base bg-white border border-emerald-200 rounded-lg py-1 text-emerald-800" value="0">
-                                <button type="button" onclick="app.addZone('seatRight', 1)" class="touch-btn w-7 h-8 bg-emerald-600 text-white rounded-lg font-bold text-sm">+</button>
+                        <!-- 오른쪽 청중석 (4칸) - 에메랄드색 배경 -->
+                        <div class="bg-emerald-100/80 border-2 border-emerald-300 rounded-2xl p-2.5 text-center shadow-sm">
+                            <div class="text-xs font-black text-emerald-950">오른쪽 청중석</div>
+                            <div class="text-[10px] font-bold text-emerald-700 mb-2">(벽쪽 · 4칸)</div>
+                            <div class="flex items-center justify-between gap-1">
+                                <button type="button" onclick="app.addZone('seatRight', -1)" class="touch-btn w-8 h-9 bg-white border border-emerald-300 rounded-xl font-black text-base text-emerald-900">-</button>
+                                <input type="number" id="val-seatRight" onchange="app.setZoneDirect('seatRight', this.value)" class="w-full h-9 text-center font-black text-base bg-white border border-emerald-300 rounded-xl text-emerald-950" value="0" min="0">
+                                <button type="button" onclick="app.addZone('seatRight', 1)" class="touch-btn w-8 h-9 bg-emerald-600 text-white rounded-xl font-black text-base shadow-sm">+</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 3. 뒤쪽 공간 및 부속실 (확성부, 마이크/임시석, 안내부, 장로회의실) -->
-                <div class="space-y-2.5">
-                    <!-- 확성부 -->
-                    <div class="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex justify-between items-center">
-                        <div>
-                            <span class="text-xs font-extrabold text-slate-700">3. 확성부 (왼쪽 뒤)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="app.addZone('soundBooth', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold">-</button>
-                            <input type="number" id="val-soundBooth" onchange="app.setZoneDirect('soundBooth', this.value)" class="w-12 text-center font-extrabold text-base bg-white border border-slate-200 rounded-lg py-1" value="0">
-                            <button type="button" onclick="app.addZone('soundBooth', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
-                        </div>
+                <!-- [뒤쪽 공간] 3. 후방 3구역 (왼쪽: 확성부 / 가운데: 마이크·뒷좌석 / 오른쪽: 안내부) -->
+                <div class="mb-3">
+                    <div class="flex justify-between items-center mb-1.5 px-1">
+                        <span class="text-xs font-extrabold text-slate-700">3. 청중석 뒤쪽 공간 (좌·중·우 3칸)</span>
+                        <button type="button" onclick="app.showHelp('rear_zones')" class="w-4 h-4 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold flex items-center justify-center">?</button>
                     </div>
-
-                    <!-- 청중마이크 / 임시석 -->
-                    <div class="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex justify-between items-center">
-                        <div>
-                            <span class="text-xs font-extrabold text-slate-700">4. 청중마이크 / 임시석 (가운데 뒤)</span>
-                            <span class="text-[10px] text-slate-400 block">마이크 전달자 또는 잠깐 뒤에 앉고 싶은 사람</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="app.addZone('rearAttendant', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold">-</button>
-                            <input type="number" id="val-rearAttendant" onchange="app.setZoneDirect('rearAttendant', this.value)" class="w-12 text-center font-extrabold text-base bg-white border border-slate-200 rounded-lg py-1" value="0">
-                            <button type="button" onclick="app.addZone('rearAttendant', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
-                        </div>
-                    </div>
-
-                    <!-- 안내부 -->
-                    <div class="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex justify-between items-center">
-                        <div>
-                            <span class="text-xs font-extrabold text-slate-700">5. 안내부 (오른쪽 뒤)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="app.addZone('outdoor', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold">-</button>
-                            <input type="number" id="val-outdoor" onchange="app.setZoneDirect('outdoor', this.value)" class="w-12 text-center font-extrabold text-base bg-white border border-slate-200 rounded-lg py-1" value="0">
-                            <button type="button" onclick="app.addZone('outdoor', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
-                        </div>
-                    </div>
-
-                    <!-- 장로회의실 -->
-                    <div class="bg-slate-50 border border-slate-200/80 p-3 rounded-xl">
-                        <div class="flex justify-between items-center mb-2">
-                            <div>
-                                <span class="text-xs font-extrabold text-slate-700">6. 장로회의실 (오른쪽 뒤 별도 방, 홀의 1/4)</span>
+                    <div class="grid grid-cols-3 gap-2">
+                        <!-- 뒤 왼쪽: 확성부 -->
+                        <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-2.5 text-center">
+                            <div class="text-xs font-black text-amber-950">확성부</div>
+                            <div class="text-[10px] font-bold text-amber-700 mb-2">(뒤 왼쪽)</div>
+                            <div class="flex items-center justify-between gap-1">
+                                <button type="button" onclick="app.addZone('soundBooth', -1)" class="touch-btn w-8 h-9 bg-white border border-amber-300 rounded-xl font-black text-base text-amber-900">-</button>
+                                <input type="number" id="val-soundBooth" onchange="app.setZoneDirect('soundBooth', this.value)" class="w-full h-9 text-center font-black text-base bg-white border border-amber-300 rounded-xl text-amber-950" value="0" min="0">
+                                <button type="button" onclick="app.addZone('soundBooth', 1)" class="touch-btn w-8 h-9 bg-amber-600 text-white rounded-xl font-black text-base">+</button>
                             </div>
-                            <label class="text-[11px] flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded cursor-pointer">
-                                <input type="checkbox" id="check-eldersRoom" onchange="app.toggleZoneCheck('eldersRoom')" class="rounded text-emerald-600"> 참석 확인
-                            </label>
                         </div>
-                        <div class="flex justify-between items-center">
-                            <button type="button" onclick="app.addZone('eldersRoom', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold">-</button>
-                            <input type="number" id="val-eldersRoom" onchange="app.setZoneDirect('eldersRoom', this.value)" class="w-12 text-center font-extrabold text-base bg-white border border-slate-200 rounded-lg py-1" value="0">
-                            <button type="button" onclick="app.addZone('eldersRoom', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
+
+                        <!-- 뒤 가운데: 청중마이크 / 임시석 -->
+                        <div class="bg-orange-50 border-2 border-orange-200 rounded-2xl p-2.5 text-center">
+                            <div class="text-xs font-black text-orange-950">마이크·뒷좌석</div>
+                            <div class="text-[10px] font-bold text-orange-700 mb-2">(뒤 가운데)</div>
+                            <div class="flex items-center justify-between gap-1">
+                                <button type="button" onclick="app.addZone('rearAttendant', -1)" class="touch-btn w-8 h-9 bg-white border border-orange-300 rounded-xl font-black text-base text-orange-900">-</button>
+                                <input type="number" id="val-rearAttendant" onchange="app.setZoneDirect('rearAttendant', this.value)" class="w-full h-9 text-center font-black text-base bg-white border border-orange-300 rounded-xl text-orange-950" value="0" min="0">
+                                <button type="button" onclick="app.addZone('rearAttendant', 1)" class="touch-btn w-8 h-9 bg-orange-600 text-white rounded-xl font-black text-base">+</button>
+                            </div>
+                        </div>
+
+                        <!-- 뒤 오른쪽: 안내부 -->
+                        <div class="bg-teal-50 border-2 border-teal-200 rounded-2xl p-2.5 text-center">
+                            <div class="text-xs font-black text-teal-950">안내부</div>
+                            <div class="text-[10px] font-bold text-teal-700 mb-2">(뒤 오른쪽)</div>
+                            <div class="flex items-center justify-between gap-1">
+                                <button type="button" onclick="app.addZone('attendant', -1)" class="touch-btn w-8 h-9 bg-white border border-teal-300 rounded-xl font-black text-base text-teal-900">-</button>
+                                <input type="number" id="val-attendant" onchange="app.setZoneDirect('attendant', this.value)" class="w-full h-9 text-center font-black text-base bg-white border border-teal-300 rounded-xl text-teal-950" value="0" min="0">
+                                <button type="button" onclick="app.addZone('attendant', 1)" class="touch-btn w-8 h-9 bg-teal-600 text-white rounded-xl font-black text-base">+</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <button type="button" onclick="app.saveDetailedSession()" class="touch-btn w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-extrabold text-xs shadow-sm mt-4">💾 구역별 대면 내역 저장</button>
-            </div>
+                <!-- [뒤 오른쪽 별도 방 & 기타] 4. 장로회의실 (홀의 1/4 공간) 및 기타 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <!-- 기타 (실외 외출 / 쉬운모드 통합분) -->
+                    <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs font-black text-slate-700">4. 기타 (실외/로비 등)</span>
+                            <span class="text-[10px] text-slate-400 block">쉬운모드 입력분 자동연동</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="app.addZone('outdoor', -1)" class="touch-btn w-9 h-9 bg-white border border-slate-300 rounded-xl font-black text-base text-slate-700">-</button>
+                            <input type="number" id="val-outdoor" onchange="app.setZoneDirect('outdoor', this.value)" class="w-12 h-9 text-center font-black text-base bg-white border border-slate-300 rounded-xl text-slate-800" value="0" min="0">
+                            <button type="button" onclick="app.addZone('outdoor', 1)" class="touch-btn w-9 h-9 bg-slate-700 text-white rounded-xl font-black text-base">+</button>
+                        </div>
+                    </div>
 
-            <!-- 비대면 참석자 입력 (하이브리드/마스터 공통) -->
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                    <!-- 장로회의실 (뒤 오른쪽 별도 방, 홀의 1/4) -->
+                    <div class="bg-rose-50/80 border-2 border-rose-200 rounded-2xl p-3 flex justify-between items-center">
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-black text-rose-950">5. 장로회의실</span>
+                                <label class="text-[10px] flex items-center gap-1 font-extrabold text-rose-700 bg-white px-1.5 py-0.5 rounded border border-rose-200 cursor-pointer">
+                                    <input type="checkbox" id="check-eldersRoom" onchange="app.toggleZoneCheck('eldersRoom')" class="rounded text-rose-600"> 확인
+                                </label>
+                            </div>
+                            <span class="text-[10px] text-rose-700 block">뒤 오른쪽 별도 방 (홀 1/4)</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="app.addZone('eldersRoom', -1)" class="touch-btn w-9 h-9 bg-white border border-rose-300 rounded-xl font-black text-base text-rose-900">-</button>
+                            <input type="number" id="val-eldersRoom" onchange="app.setZoneDirect('eldersRoom', this.value)" class="w-12 h-9 text-center font-black text-base bg-white border border-rose-300 rounded-xl text-rose-950" value="0" min="0">
+                            <button type="button" onclick="app.addZone('eldersRoom', 1)" class="touch-btn w-9 h-9 bg-rose-600 text-white rounded-xl font-black text-base">+</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 💻 비대면 참석자 입력 (쉬운 모드와 동일한 직관적 방식 + 기기수 보조) -->
+            <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
-                    <div>
-                        <h2 class="font-extrabold text-slate-800 text-base">💻 비대면 참석자 입력</h2>
-                        <p class="text-[11px] text-slate-400">접속 기기수 및 비대면 총인원 입력</p>
+                    <div class="flex items-center gap-1.5">
+                        <h2 class="font-extrabold text-slate-800 text-base">💻 비대면 참석자 카운터</h2>
+                        <button type="button" onclick="app.showHelp('easy_online')" class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center">?</button>
                     </div>
-                    <span class="bg-indigo-50 text-indigo-700 font-extrabold text-xs px-2.5 py-1 rounded-lg" id="label-online-sum">0명 (기기 0대)</span>
+                    <span class="bg-indigo-50 text-indigo-700 font-extrabold text-xs px-2.5 py-1 rounded-lg" id="label-online-sum">비대면: 0명</span>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[11px] text-slate-500 font-bold block mb-1">접속 기기(계정) 수</label>
-                        <div class="flex items-center gap-1">
-                            <button type="button" onclick="app.adjustOnlineDirect('devices', -1)" class="touch-btn w-8 h-9 bg-slate-200 rounded-lg font-bold">-</button>
-                            <input type="number" id="input-online-devices" onchange="app.saveOnlineDirect()" class="w-full bg-white border border-slate-200 p-1.5 rounded-lg text-center font-extrabold text-base" value="0">
-                            <button type="button" onclick="app.adjustOnlineDirect('devices', 1)" class="touch-btn w-8 h-9 bg-indigo-600 text-white rounded-lg font-bold">+</button>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="text-[11px] text-slate-500 font-bold block mb-1">비대면 총 참석자 수</label>
-                        <div class="flex items-center gap-1">
-                            <button type="button" onclick="app.adjustOnlineDirect('total', -1)" class="touch-btn w-8 h-9 bg-slate-200 rounded-lg font-bold">-</button>
-                            <input type="number" id="input-online-total" onchange="app.saveOnlineDirect()" class="w-full bg-white border border-slate-200 p-1.5 rounded-lg text-center font-extrabold text-base text-indigo-700" value="0">
-                            <button type="button" onclick="app.adjustOnlineDirect('total', 1)" class="touch-btn w-8 h-9 bg-indigo-600 text-white rounded-lg font-bold">+</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- 마스터 전용 영역 (임시방문자 4종 및 모수 관리 - 마스터 로그인 시에만 노출) -->
-            <div id="master-only-section" class="hidden space-y-4">
-                <div class="bg-amber-50 border-2 border-amber-300 p-4 rounded-2xl">
-                    <h2 class="font-extrabold text-amber-900 text-base mb-1">⚙️ [마스터 전용] 당일 임시 참석자 입력 (4종)</h2>
-                    <p class="text-[11px] text-amber-700 mb-3">실질 참석 통계 계산 시 분자에서 차감되는 외부 방문 인원 (마스터만 수정 가능)</p>
-                    <div class="space-y-2.5">
-                        <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-amber-200">
-                            <span class="text-xs font-extrabold text-slate-700">순회감독자 부부</span>
-                            <div class="flex items-center gap-2">
-                                <button type="button" onclick="app.addTemp('circuitOverseer', -1)" class="touch-btn w-8 h-8 bg-slate-200 rounded-lg font-extrabold">-</button>
-                                <span id="val-circuitOverseer" class="w-8 text-center font-extrabold text-base">0</span>
-                                <button type="button" onclick="app.addTemp('circuitOverseer', 1)" class="touch-btn w-8 h-8 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
-                            </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- 비대면 총 참석자 수 (메인) -->
+                    <div class="bg-indigo-50/70 border-2 border-indigo-200 p-3 rounded-2xl">
+                        <label class="text-xs font-black text-indigo-950 block mb-1.5 text-center">비대면 참석자 수 (필수)</label>
+                        <div class="flex items-center justify-between gap-1.5">
+                            <button type="button" onclick="app.adjustOnlineDirect('total', -1)" class="touch-btn w-11 h-11 bg-white border border-indigo-200 rounded-xl font-black text-xl text-indigo-900">-</button>
+                            <input type="number" id="input-online-total" onchange="app.saveOnlineDirect()" class="w-full h-11 bg-white border border-indigo-300 rounded-xl text-center font-black text-xl text-indigo-800" value="0" min="0">
+                            <button type="button" onclick="app.adjustOnlineDirect('total', 1)" class="touch-btn w-11 h-11 bg-indigo-600 text-white rounded-xl font-black text-xl shadow-sm">+</button>
                         </div>
-                        <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-amber-200">
-                            <span class="text-xs font-extrabold text-slate-700">전파자학교 학생 수</span>
-                            <div class="flex items-center gap-2">
-                                <button type="button" onclick="app.addTemp('skeStudents', -1)" class="touch-btn w-8 h-8 bg-slate-200 rounded-lg font-extrabold">-</button>
-                                <span id="val-skeStudents" class="w-8 text-center font-extrabold text-base">0</span>
-                                <button type="button" onclick="app.addTemp('skeStudents', 1)" class="touch-btn w-8 h-8 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-amber-200">
-                            <span class="text-xs font-extrabold text-slate-700">공개강연 연사</span>
-                            <div class="flex items-center gap-2">
-                                <button type="button" onclick="app.addTemp('publicSpeaker', -1)" class="touch-btn w-8 h-8 bg-slate-200 rounded-lg font-extrabold">-</button>
-                                <span id="val-publicSpeaker" class="w-8 text-center font-extrabold text-base">0</span>
-                                <button type="button" onclick="app.addTemp('publicSpeaker', 1)" class="touch-btn w-8 h-8 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
-                            </div>
-                        </div>
-                        <div class="bg-white p-3 rounded-xl border border-amber-200">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-xs font-extrabold text-slate-700">특별 방문자</span>
-                                <div class="flex items-center gap-2">
-                                    <button type="button" onclick="app.addTemp('specialVisitors', -1)" class="touch-btn w-8 h-8 bg-slate-200 rounded-lg font-extrabold">-</button>
-                                    <span id="val-specialVisitors" class="w-8 text-center font-extrabold text-base">0</span>
-                                    <button type="button" onclick="app.addTemp('specialVisitors', 1)" class="touch-btn w-8 h-8 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
-                                </div>
-                            </div>
-                            <input type="text" id="input-specialNote" onchange="app.saveTempNote()" placeholder="특별 방문자 메모 입력" class="w-full text-xs bg-slate-50 border border-slate-200 p-2 rounded-lg">
+                    </div>
+
+                    <!-- 접속 기기 수 (선택) -->
+                    <div class="bg-slate-50 border border-slate-200 p-3 rounded-2xl">
+                        <label class="text-xs font-bold text-slate-600 block mb-1.5 text-center">접속 기기/화면 수 (선택)</label>
+                        <div class="flex items-center justify-between gap-1.5">
+                            <button type="button" onclick="app.adjustOnlineDirect('devices', -1)" class="touch-btn w-11 h-11 bg-white border border-slate-300 rounded-xl font-black text-xl text-slate-700">-</button>
+                            <input type="number" id="input-online-devices" onchange="app.saveOnlineDirect()" class="w-full h-11 bg-white border border-slate-300 rounded-xl text-center font-black text-xl text-slate-700" value="0" min="0">
+                            <button type="button" onclick="app.adjustOnlineDirect('devices', 1)" class="touch-btn w-11 h-11 bg-slate-700 text-white rounded-xl font-black text-xl">+</button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- 월간 누적 통계표 탭 -->
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+            <!-- 👑 [마스터 전용] 당일 임시 참석자 4종 입력 (마스터 1935 로그인 시에만 표시) -->
+            <section id="master-only-section" class="hidden bg-amber-50/90 border-2 border-amber-300 p-4 rounded-2xl shadow-sm">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b border-amber-200">
+                    <div class="flex items-center gap-1.5">
+                        <h2 class="font-black text-amber-950 text-base">👑 [마스터 전용] 당일 임시 참석자 (4종)</h2>
+                        <button type="button" onclick="app.showHelp('temp_visitors')" class="w-5 h-5 rounded-full bg-amber-200 text-amber-900 text-xs font-bold flex items-center justify-center">?</button>
+                    </div>
+                    <span class="bg-white text-amber-900 font-extrabold text-xs px-2.5 py-1 rounded-lg border border-amber-300" id="label-temp-sum">임시 합계: 0명</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-2.5">
+                    <div class="bg-white p-3 rounded-xl border border-amber-200 flex justify-between items-center">
+                        <span class="text-xs font-extrabold text-slate-700">1) 순회감독자 부부</span>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="app.addTemp('circuitOverseer', -1)" class="touch-btn w-8 h-8 bg-slate-100 rounded-lg font-black">-</button>
+                            <input type="number" id="val-circuitOverseer" onchange="app.setTempDirect('circuitOverseer', this.value)" class="w-12 h-8 text-center font-black text-sm border border-slate-200 rounded-lg" value="0" min="0">
+                            <button type="button" onclick="app.addTemp('circuitOverseer', 1)" class="touch-btn w-8 h-8 bg-amber-600 text-white rounded-lg font-black">+</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-xl border border-amber-200 flex justify-between items-center">
+                        <span class="text-xs font-extrabold text-slate-700">2) 전파자학교 학생</span>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="app.addTemp('skeStudents', -1)" class="touch-btn w-8 h-8 bg-slate-100 rounded-lg font-black">-</button>
+                            <input type="number" id="val-skeStudents" onchange="app.setTempDirect('skeStudents', this.value)" class="w-12 h-8 text-center font-black text-sm border border-slate-200 rounded-lg" value="0" min="0">
+                            <button type="button" onclick="app.addTemp('skeStudents', 1)" class="touch-btn w-8 h-8 bg-amber-600 text-white rounded-lg font-black">+</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-xl border border-amber-200 flex justify-between items-center">
+                        <span class="text-xs font-extrabold text-slate-700">3) 공개강연 연사</span>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="app.addTemp('publicSpeaker', -1)" class="touch-btn w-8 h-8 bg-slate-100 rounded-lg font-black">-</button>
+                            <input type="number" id="val-publicSpeaker" onchange="app.setTempDirect('publicSpeaker', this.value)" class="w-12 h-8 text-center font-black text-sm border border-slate-200 rounded-lg" value="0" min="0">
+                            <button type="button" onclick="app.addTemp('publicSpeaker', 1)" class="touch-btn w-8 h-8 bg-amber-600 text-white rounded-lg font-black">+</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 rounded-xl border border-amber-200 flex justify-between items-center">
+                        <span class="text-xs font-extrabold text-slate-700">4) 특별 방문자</span>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="app.addTemp('specialVisitors', -1)" class="touch-btn w-8 h-8 bg-slate-100 rounded-lg font-black">-</button>
+                            <input type="number" id="val-specialVisitors" onchange="app.setTempDirect('specialVisitors', this.value)" class="w-12 h-8 text-center font-black text-sm border border-slate-200 rounded-lg" value="0" min="0">
+                            <button type="button" onclick="app.addTemp('specialVisitors', 1)" class="touch-btn w-8 h-8 bg-amber-600 text-white rounded-lg font-black">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="text" id="input-specialNote" onchange="app.saveTempNote()" placeholder="특별 방문자 메모 입력 (예: 타 지역 가족 방문 등)" class="w-full text-xs bg-white border border-amber-300 p-2.5 rounded-xl">
+            </section>
+
+            <!-- 📅 월간 누적 통계표 및 보고서 내보내기 -->
+            <section class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
-                    <h2 class="font-extrabold text-slate-800 text-base">📅 월간 집회 참석 누적 통계표</h2>
+                    <div class="flex items-center gap-1.5">
+                        <h2 class="font-extrabold text-slate-800 text-base">📅 월간 집회 참석 누적 통계표</h2>
+                        <button type="button" onclick="app.showHelp('monthly_table')" class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold flex items-center justify-center">?</button>
+                    </div>
+                    <span class="text-[11px] text-slate-400">행 클릭 시 해당 회차로 이동</span>
                 </div>
+
+                <!-- 평일집회 표 -->
                 <div class="mb-4">
-                    <h3 class="text-xs font-extrabold text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg mb-2">■ 평일집회</h3>
+                    <h3 class="text-xs font-extrabold text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg mb-2">■ 1. 평일집회 (목요일 / 순회주간 화요일)</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-xs">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
-                                    <th class="p-2">날짜/구분</th>
+                                    <th class="p-2">주차/날짜</th>
                                     <th class="p-2 text-right">대면</th>
                                     <th class="p-2 text-right">비대면</th>
                                     <th class="p-2 text-right">총계</th>
+                                    <th class="p-2 text-right">일반%</th>
+                                    <th class="p-2 text-right">실질%</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-weekday"></tbody>
                         </table>
                     </div>
                 </div>
+
+                <!-- 주말집회 표 -->
                 <div class="mb-4">
-                    <h3 class="text-xs font-extrabold text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-lg mb-2">■ 주말집회</h3>
+                    <h3 class="text-xs font-extrabold text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-lg mb-2">■ 2. 주말집회 (일요일)</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-xs">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
-                                    <th class="p-2">날짜/구분</th>
+                                    <th class="p-2">주차/날짜</th>
                                     <th class="p-2 text-right">대면</th>
                                     <th class="p-2 text-right">비대면</th>
                                     <th class="p-2 text-right">총계</th>
+                                    <th class="p-2 text-right">일반%</th>
+                                    <th class="p-2 text-right">실질%</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-weekend"></tbody>
                         </table>
                     </div>
                 </div>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                    <button type="button" onclick="app.copyCurrentReport()" class="touch-btn bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-sm">📋 현재 회차 보고서 복사</button>
-                    <button type="button" onclick="app.exportMonthlyCSV()" class="touch-btn bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-sm">📊 월간 통계 엑셀(CSV) 저장</button>
+                    <button type="button" onclick="app.copyCurrentReport()" class="touch-btn bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-sm">
+                        📋 현재 회차 보고서 텍스트 복사
+                    </button>
+                    <button type="button" onclick="app.exportMonthlyCSV()" class="touch-btn bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-sm">
+                        📊 월간 통계 엑셀(CSV) 다운로드
+                    </button>
                 </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- ==================== [모달 1] 쉬운 모드용 '이번 달 보기' 모달 ==================== -->
+    <div id="easy-monthly-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-200">
+                <div>
+                    <h2 class="text-base font-black text-slate-800">📅 이번 달 집회 참석 통계</h2>
+                    <p class="text-[11px] text-slate-400">쉬운 모드에서는 이번 달 통계만 열람할 수 있습니다</p>
+                </div>
+                <button type="button" onclick="app.toggleEasyMonthlyModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold">✕</button>
             </div>
+            <div id="easy-monthly-body" class="space-y-4 text-xs"></div>
+            <button type="button" onclick="app.toggleEasyMonthlyModal()" class="touch-btn w-full bg-slate-800 text-white py-3 rounded-2xl font-extrabold text-xs mt-4">닫기</button>
         </div>
     </div>
 
-    <!-- ==================== 3. 마스터 관리자 전용 모달 (일정 및 모수 설정) ==================== -->
+    <!-- ==================== [모달 2] 마스터 관리자 설정 모달 (1935 전용) ==================== -->
     <div id="master-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-3">
         <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-200">
-                <h2 class="text-base font-extrabold text-slate-800">⚙️ 마스터 관리자 설정</h2>
+                <h2 class="text-base font-black text-slate-800">⚙️ 마스터 관리자 설정</h2>
                 <button type="button" onclick="app.closeMasterModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold">✕</button>
             </div>
+
             <div class="space-y-4 text-xs">
-                <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                    <h3 class="font-extrabold text-slate-800 text-sm mb-2">1. 현재 회차 일정 및 상태 변경</h3>
-                    <div class="space-y-2">
-                        <select id="master-subtype" class="w-full bg-white border border-slate-300 p-2.5 rounded-xl font-bold">
-                            <option value="normal">정상 진행</option>
-                            <option value="circuit">순회주간 (화요일 이동)</option>
-                            <option value="memorial">기념식</option>
-                            <option value="none">집회 없음 (기록 제외)</option>
-                        </select>
-                        <input type="date" id="master-custom-date" class="w-full bg-white border border-slate-300 p-2 rounded-xl font-bold">
-                        <input type="text" id="master-session-note" placeholder="사유 메모 (예: 지역 대회)" class="w-full bg-white border border-slate-300 p-2 rounded-xl">
-                        <button type="button" onclick="app.saveMasterSessionConfig()" class="touch-btn w-full bg-blue-600 text-white py-2.5 rounded-xl font-extrabold">회차 상태 저장</button>
+                <!-- 1. 회차 일정 및 상태 변경 -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <h3 class="font-extrabold text-slate-800 text-sm mb-2">1. 현재 회차 일정·상태 변경</h3>
+                    <div class="space-y-2.5">
+                        <div>
+                            <label class="text-slate-500 font-bold block mb-1">집회 진행 상태</label>
+                            <select id="master-subtype" onchange="app.onMasterSubtypeChange()" class="w-full bg-white border border-slate-300 p-2.5 rounded-xl font-bold">
+                                <option value="normal">정상 진행 (목요일 평일 / 일요일 주말)</option>
+                                <option value="circuit">순회주간 (평일집회를 화요일로 자동 이동)</option>
+                                <option value="memorial">기념식</option>
+                                <option value="special">특별 모임</option>
+                                <option value="none">집회 없음 (대회 등 - 기록 및 월평균 분모 제외)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-slate-500 font-bold block mb-1">실제 진행 날짜</label>
+                            <input type="date" id="master-custom-date" class="w-full bg-white border border-slate-300 p-2 rounded-xl font-bold">
+                        </div>
+                        <div>
+                            <label class="text-slate-500 font-bold block mb-1">비고 / 사유 메모</label>
+                            <input type="text" id="master-session-note" placeholder="예: 지역 대회, 순회감독자 방문 주간 등" class="w-full bg-white border border-slate-300 p-2 rounded-xl">
+                        </div>
+                        <button type="button" onclick="app.saveMasterSessionConfig()" class="touch-btn w-full bg-blue-600 text-white py-2.5 rounded-xl font-extrabold">회차 일정 상태 저장</button>
                     </div>
                 </div>
-                <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                    <h3 class="font-extrabold text-slate-800 text-sm mb-2">2. 기본 전도인 수 설정</h3>
-                    <input type="number" id="master-pub-count" class="w-full bg-white border border-slate-300 p-2 rounded-xl font-extrabold text-sm mb-2" value="100">
-                    <button type="button" onclick="app.saveMasterPoolConfig()" class="touch-btn w-full bg-slate-800 text-white py-2.5 rounded-xl font-extrabold">전도인 수 저장</button>
+
+                <!-- 2. 회중 기준 인원 및 명단(태그) 모수 관리 -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <h3 class="font-extrabold text-slate-800 text-sm mb-2">2. 회중 기준 인원 및 명단 설정</h3>
+                    <div class="mb-3">
+                        <label class="text-slate-600 font-bold block mb-1">기본 전도인 수 (일반 통계 분모)</label>
+                        <input type="number" id="master-pub-count" class="w-full bg-white border border-slate-300 p-2 rounded-xl font-extrabold text-sm" value="100" min="1">
+                    </div>
+
+                    <!-- 정기 참석 관심자 명단 -->
+                    <div class="mb-3 bg-white p-3 rounded-xl border border-slate-200">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="font-extrabold text-slate-700">정기 참석 관심자 명단</span>
+                            <span class="text-indigo-600 font-extrabold" id="master-interested-len">0명</span>
+                        </div>
+                        <div class="flex gap-1.5 mb-2">
+                            <input type="text" id="input-add-interested" onkeydown="if(event.key==='Enter'){event.preventDefault(); app.addPersonChip('interested');}" placeholder="이름 입력 후 추가" class="flex-1 border border-slate-300 p-2 rounded-lg">
+                            <button type="button" onclick="app.addPersonChip('interested')" class="touch-btn bg-indigo-600 text-white px-3 rounded-lg font-extrabold">+ 추가</button>
+                        </div>
+                        <div id="master-interested-chips" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+
+                    <!-- 비대면 전용 인원 명단 -->
+                    <div class="mb-3 bg-white p-3 rounded-xl border border-slate-200">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="font-extrabold text-slate-700">비대면으로만 참석 가능한 인원</span>
+                            <span class="text-rose-600 font-extrabold" id="master-onlineonly-len">0명</span>
+                        </div>
+                        <div class="flex gap-1.5 mb-2">
+                            <input type="text" id="input-add-onlineonly" onkeydown="if(event.key==='Enter'){event.preventDefault(); app.addPersonChip('onlineOnly');}" placeholder="이름 입력 후 추가" class="flex-1 border border-slate-300 p-2 rounded-lg">
+                            <button type="button" onclick="app.addPersonChip('onlineOnly')" class="touch-btn bg-rose-600 text-white px-3 rounded-lg font-extrabold">+ 추가</button>
+                        </div>
+                        <div id="master-onlineonly-chips" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+
+                    <button type="button" onclick="app.saveMasterPoolConfig()" class="touch-btn w-full bg-slate-800 text-white py-2.5 rounded-xl font-extrabold">기준 인원 및 명단 저장</button>
+                </div>
+
+                <!-- 3. 암호 변경 및 초기화 -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <h3 class="font-extrabold text-slate-800 text-sm mb-2">3. 접속 암호(PIN) 변경</h3>
+                    <div class="grid grid-cols-2 gap-2 mb-2.5">
+                        <input type="password" inputmode="numeric" maxlength="4" id="master-new-userpin" placeholder="새 일반 암호 (4자리)" class="bg-white border border-slate-300 p-2 rounded-xl text-center font-bold">
+                        <input type="password" inputmode="numeric" maxlength="4" id="master-new-masterpin" placeholder="새 마스터 암호 (4자리)" class="bg-white border border-slate-300 p-2 rounded-xl text-center font-bold">
+                    </div>
+                    <button type="button" onclick="app.saveMasterPins()" class="touch-btn w-full bg-slate-700 text-white py-2.5 rounded-xl font-extrabold">암호 변경 저장</button>
+                </div>
+
+                <div class="bg-rose-50 p-4 rounded-2xl border border-rose-200">
+                    <h3 class="font-extrabold text-rose-800 text-sm mb-1">4. 현재 회차 숫자 초기화</h3>
+                    <button type="button" onclick="app.resetCurrentSession()" class="touch-btn w-full bg-rose-600 text-white py-2.5 rounded-xl font-extrabold mt-1">현재 회차 전체 0으로 초기화</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ==================== 4. 이번달 통계 모달 (쉬운 모드용) ==================== -->
-    <div id="month-stats-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-3">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-200">
-                <h2 class="text-base font-extrabold text-slate-800">📅 이번 달 집회 참석 통계</h2>
-                <button type="button" onclick="app.closeMonthStatsModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold">✕</button>
+    <!-- ==================== [모달 3] 물음표(?) 도움말 팝업 모달 ==================== -->
+    <div id="help-modal" onclick="app.closeHelp()" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-5 border border-slate-100">
+            <div class="flex justify-between items-center mb-2.5 pb-2 border-b border-slate-100">
+                <h3 id="help-modal-title" class="text-sm font-black text-blue-700">💡 도움말 안내</h3>
+                <button type="button" onclick="app.closeHelp()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 font-bold text-xs">✕</button>
             </div>
-            <div class="space-y-3 text-xs">
-                <div id="month-stats-content" class="space-y-2"></div>
-                <button type="button" onclick="app.closeMonthStatsModal()" class="touch-btn w-full bg-slate-800 text-white py-2.5 rounded-xl font-extrabold mt-3">확인</button>
+            <p id="help-modal-text" class="text-xs text-slate-600 leading-relaxed whitespace-pre-line mb-4"></p>
+            <div class="flex gap-2">
+                <a href="./help.html" class="flex-1 text-center bg-blue-50 text-blue-700 py-2.5 rounded-xl font-extrabold text-xs">📖 전체 사용설명서 보기</a>
+                <button type="button" onclick="app.closeHelp()" class="flex-1 bg-slate-800 text-white py-2.5 rounded-xl font-extrabold text-xs">확인</button>
             </div>
         </div>
     </div>
