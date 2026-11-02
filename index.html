@@ -1,0 +1,1790 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MeetCount</title>
+    <meta name="description" content="대면·비대면 집회 참석자 실시간 카운팅 및 통계 시스템">
+    <meta name="theme-color" content="#1e40af">
+
+    <!-- 카카오톡 및 메신저 링크 공유 미리보기 (Open Graph) -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ohyaksa.github.io/meetcount/">
+    <meta property="og:title" content="MeetCount">
+    <meta property="og:description" content="참석자 카운팅 / 집계 보조 사이트">
+    <meta property="og:image" content="https://ohyaksa.github.io/meetcount/og-image-meetcount.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="400">
+
+    <!-- 스마트폰 홈 화면 아이콘 설정 (iOS / Android / Favicon) -->
+    <link rel="icon" type="image/png" href="./app-icon-meetcount.png">
+    <link rel="apple-touch-icon" href="./app-icon-meetcount.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="MeetCount">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- PWA 동적 매니페스트 생성 -->
+    <script>
+        const manifestData = {
+            name: "MeetCount",
+            short_name: "MeetCount",
+            start_url: "./",
+            display: "standalone",
+            background_color: "#f8fafc",
+            theme_color: "#1e40af",
+            icons: [
+                {
+                    src: "https://ohyaksa.github.io/meetcount/app-icon-meetcount.png",
+                    sizes: "512x512",
+                    type: "image/png",
+                    purpose: "any maskable"
+                }
+            ]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+        const manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = URL.createObjectURL(manifestBlob);
+        document.head.appendChild(manifestLink);
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif; }
+        .touch-btn { touch-action: manipulation; user-select: none; }
+        .touch-btn:active { transform: scale(0.96); }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- 1. PIN 암호 인증 화면 -->
+    <div id="auth-screen" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center border border-slate-100">
+            <img src="./app-icon-meetcount.png" alt="MeetCount" onerror="this.style.display='none'" class="w-16 h-16 mx-auto mb-3 rounded-2xl shadow-md">
+            <h1 class="text-2xl font-extrabold text-blue-700 tracking-tight">MeetCount</h1>
+            <p class="text-xs text-slate-500 mt-1 mb-5">접속 암호 4자리를 입력해주세요 (1회 입력 시 24시간 유지)</p>
+
+            <div id="pin-display" class="text-3xl font-mono font-bold tracking-[0.5em] bg-slate-100 py-3.5 rounded-2xl mb-5 text-blue-700 border border-slate-200">
+                ••••
+            </div>
+
+            <div class="grid grid-cols-3 gap-2.5 mb-3">
+                <button onclick="app.pressPin('1')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">1</button>
+                <button onclick="app.pressPin('2')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">2</button>
+                <button onclick="app.pressPin('3')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">3</button>
+                <button onclick="app.pressPin('4')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">4</button>
+                <button onclick="app.pressPin('5')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">5</button>
+                <button onclick="app.pressPin('6')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">6</button>
+                <button onclick="app.pressPin('7')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">7</button>
+                <button onclick="app.pressPin('8')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">8</button>
+                <button onclick="app.pressPin('9')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">9</button>
+                <button onclick="app.clearPin()" class="touch-btn bg-rose-50 text-rose-600 hover:bg-rose-100 py-4 rounded-2xl text-sm font-bold">지움</button>
+                <button onclick="app.pressPin('0')" class="touch-btn bg-slate-100 hover:bg-slate-200 py-4 rounded-2xl text-xl font-bold text-slate-700">0</button>
+                <button onclick="app.submitPin()" class="touch-btn bg-blue-600 text-white hover:bg-blue-700 py-4 rounded-2xl text-sm font-bold shadow-md">확인</button>
+            </div>
+            <p id="pin-error" class="text-xs text-rose-600 font-semibold min-h-[1.25rem]"></p>
+        </div>
+    </div>
+
+    <!-- 2. 메인 앱 컨테이너 -->
+    <div id="main-app" class="hidden flex-1 flex flex-col max-w-xl w-full mx-auto p-3 sm:p-4 pb-24">
+
+        <!-- 상단 헤더 & 월/회차 선택 바 -->
+        <header class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-200/80 mb-3">
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center gap-2.5">
+                    <img src="./app-icon-meetcount.png" alt="Icon" onerror="this.style.display='none'" class="w-8 h-8 rounded-lg shadow-sm">
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <h1 class="text-lg font-black text-blue-700 leading-none">MeetCount</h1>
+                            <span id="role-badge" class="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold">일반</span>
+                            <span id="sync-dot" class="w-2 h-2 rounded-full bg-emerald-500" title="실시간 동기화 중"></span>
+                        </div>
+                        <p id="header-subtitle" class="text-[11px] text-slate-400 mt-0.5">실시간 집회 참석 집계</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="app.openPinSwitch()" class="touch-btn text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-2 rounded-xl font-bold">🔑 권한전환</button>
+                    <button id="master-btn" onclick="app.openMasterModal()" class="hidden touch-btn text-xs bg-slate-800 hover:bg-slate-900 text-white px-2.5 py-2 rounded-xl font-bold">⚙️ 마스터</button>
+                </div>
+            </div>
+
+            <!-- 년월 및 해당 월 회차 선택 드롭다운 -->
+            <div class="grid grid-cols-12 gap-2 pt-2 border-t border-slate-100">
+                <div class="col-span-5">
+                    <select id="month-selector" onchange="app.onMonthChange()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-2.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </select>
+                </div>
+                <div class="col-span-7">
+                    <select id="session-selector" onchange="app.onSessionChange()" class="w-full bg-blue-50/70 border border-blue-200 text-blue-900 rounded-xl px-2.5 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <!-- 상단 실시간 통합 대시보드 (일반 통계 + 실질 분석 통계) -->
+        <section class="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 text-white p-4 rounded-2xl shadow-lg mb-4">
+            <div class="flex justify-between items-start border-b border-white/15 pb-3 mb-3">
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-xs text-blue-200 font-medium">총 참석자 (대면+비대면)</span>
+                        <span id="session-status-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-white/20 text-white font-bold">정상</span>
+                    </div>
+                    <div class="text-3xl font-black tracking-tight mt-0.5" id="dash-grand-total">0명</div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-blue-200 font-medium">일반 통계 (전도인 <span id="dash-pub-count">0</span>명 기준)</span>
+                    <div class="text-2xl font-extrabold text-amber-300 mt-0.5" id="dash-general-rate">0.0%</div>
+                </div>
+            </div>
+
+            <!-- 대면 / 비대면 / 임시 참석자 소계 -->
+            <div class="grid grid-cols-3 gap-2 text-center mb-3">
+                <div class="bg-white/10 rounded-xl p-2">
+                    <div class="text-[11px] text-blue-200">대면 합계</div>
+                    <div class="text-base font-extrabold" id="dash-inperson">0명</div>
+                    <div class="text-[10px] text-blue-200/80" id="dash-seat-sub">청중석 0명</div>
+                </div>
+                <div class="bg-white/10 rounded-xl p-2">
+                    <div class="text-[11px] text-blue-200">비대면 합계</div>
+                    <div class="text-base font-extrabold" id="dash-online">0명</div>
+                    <div class="text-[10px] text-blue-200/80" id="dash-online-dev">기기 0대</div>
+                </div>
+                <div class="bg-white/10 rounded-xl p-2">
+                    <div class="text-[11px] text-blue-200">임시 참석자</div>
+                    <div class="text-base font-extrabold" id="dash-temp">0명</div>
+                    <div class="text-[10px] text-blue-200/80">실질통계 차감</div>
+                </div>
+            </div>
+
+            <!-- 분석용 실질 참석 통계 2종 -->
+            <div class="bg-slate-900/35 rounded-xl p-2.5 text-xs space-y-1.5 border border-white/10">
+                <div class="flex justify-between items-center">
+                    <span class="text-blue-100">• 대면 실질 참석률 <span class="text-[10px] text-blue-300" id="dash-real-inperson-formula">(대면-임시)/대면가능0명</span></span>
+                    <span class="font-extrabold text-emerald-300 text-sm" id="dash-real-inperson-rate">0.0%</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-blue-100">• 전체 실질 참석률 <span class="text-[10px] text-blue-300" id="dash-real-total-formula">(전체-임시)/총인원0명</span></span>
+                    <span class="font-extrabold text-emerald-300 text-sm" id="dash-real-total-rate">0.0%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 집회 없음(대회/기념식 등) 상태일 때 안내 배너 -->
+        <div id="no-meeting-banner" class="hidden bg-amber-50 border-2 border-amber-300 text-amber-900 p-4 rounded-2xl mb-4 text-center">
+            <div class="font-extrabold text-base mb-1">🚫 이번 회차는 ‘집회 없음(기록 제외)’ 상태입니다.</div>
+            <p class="text-xs text-amber-700" id="no-meeting-reason">사유: 대회 기간 또는 특별 일정 (월평균 계산 분모에서 자동 제외됨)</p>
+        </div>
+
+        <!-- 3단 탭 네비게이션 -->
+        <nav class="flex bg-slate-200/90 p-1 rounded-2xl mb-4">
+            <button onclick="app.switchTab('counter')" id="tab-btn-counter" class="touch-btn flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold bg-white text-blue-700 shadow-sm transition">1. 대면·비대면 카운터</button>
+            <button onclick="app.switchTab('visitors')" id="tab-btn-visitors" class="touch-btn flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-600 transition">2. 임시방문·모수</button>
+            <button onclick="app.switchTab('monthly')" id="tab-btn-monthly" class="touch-btn flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-600 transition">3. 월간통계·보고</button>
+        </nav>
+
+        <!-- ==================== [탭 1] 대면 & 비대면 카운터 ==================== -->
+        <div id="tab-counter" class="space-y-4">
+
+            <!-- 대면 카운터 (6개 분류 / 8개 구역 공간 배치형) -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                    <div>
+                        <h2 class="font-extrabold text-slate-800 text-base">🏛️ 대면 참석자 카운터</h2>
+                        <p class="text-[11px] text-slate-400">전도인·관심자·방문자 구분 없이 현장 인원 전원 카운트</p>
+                    </div>
+                    <span class="bg-blue-50 text-blue-700 font-extrabold text-xs px-2.5 py-1 rounded-lg" id="label-inperson-sum">소계: 0명</span>
+                </div>
+
+                <!-- 1) 연단 (상단 중앙 배치) -->
+                <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3 mb-3 flex justify-between items-center">
+                    <div>
+                        <span class="text-xs font-extrabold text-slate-700">1) 연단</span>
+                        <span class="text-[11px] text-slate-400 block">연사 및 사회자</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="app.addZone('platform', -1)" class="touch-btn w-10 h-10 bg-slate-200 hover:bg-slate-300 rounded-xl font-extrabold text-lg text-slate-700">-</button>
+                        <input type="number" id="val-platform" onchange="app.setZoneDirect('platform', this.value)" class="w-14 text-center font-extrabold text-lg bg-white border border-slate-200 rounded-xl py-1.5">
+                        <button onclick="app.addZone('platform', 1)" class="touch-btn w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-extrabold text-lg shadow-sm">+</button>
+                    </div>
+                </div>
+
+                <!-- 2) 청중석 3구역 (왼쪽 창가 / 가운데 / 오른쪽 벽쪽) + 줄 단위 빠른 가산기 -->
+                <div class="bg-blue-50/50 border border-blue-200/80 rounded-2xl p-3 mb-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-extrabold text-blue-900">2) 청중석 3구역 (구역 터치 시 줄 단위 빠른 합산)</span>
+                        <span class="text-xs font-bold text-blue-700" id="label-seats-sum">청중석: 0명</span>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 mb-3">
+                        <!-- 왼쪽(창가) -->
+                        <div id="card-seatLeft" onclick="app.selectSeatZone('seatLeft')" class="cursor-pointer bg-white border-2 border-blue-500 rounded-xl p-2.5 text-center shadow-sm transition">
+                            <div class="text-[11px] font-bold text-slate-500">왼쪽 (창가)</div>
+                            <div class="text-2xl font-black text-blue-700 my-1" id="val-seatLeft">0</div>
+                            <div class="flex justify-center gap-1.5" onclick="event.stopPropagation()">
+                                <button onclick="app.addZone('seatLeft', -1)" class="touch-btn w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg font-extrabold text-sm">-</button>
+                                <button onclick="app.addZone('seatLeft', 1)" class="touch-btn w-8 h-8 bg-blue-600 text-white rounded-lg font-extrabold text-sm">+</button>
+                            </div>
+                        </div>
+
+                        <!-- 가운데 -->
+                        <div id="card-seatCenter" onclick="app.selectSeatZone('seatCenter')" class="cursor-pointer bg-white border-2 border-slate-200 rounded-xl p-2.5 text-center shadow-sm transition">
+                            <div class="text-[11px] font-bold text-slate-500">가운데</div>
+                            <div class="text-2xl font-black text-blue-700 my-1" id="val-seatCenter">0</div>
+                            <div class="flex justify-center gap-1.5" onclick="event.stopPropagation()">
+                                <button onclick="app.addZone('seatCenter', -1)" class="touch-btn w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg font-extrabold text-sm">-</button>
+                                <button onclick="app.addZone('seatCenter', 1)" class="touch-btn w-8 h-8 bg-blue-600 text-white rounded-lg font-extrabold text-sm">+</button>
+                            </div>
+                        </div>
+
+                        <!-- 오른쪽(벽쪽) -->
+                        <div id="card-seatRight" onclick="app.selectSeatZone('seatRight')" class="cursor-pointer bg-white border-2 border-slate-200 rounded-xl p-2.5 text-center shadow-sm transition">
+                            <div class="text-[11px] font-bold text-slate-500">오른쪽 (벽쪽)</div>
+                            <div class="text-2xl font-black text-blue-700 my-1" id="val-seatRight">0</div>
+                            <div class="flex justify-center gap-1.5" onclick="event.stopPropagation()">
+                                <button onclick="app.addZone('seatRight', -1)" class="touch-btn w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg font-extrabold text-sm">-</button>
+                                <button onclick="app.addZone('seatRight', 1)" class="touch-btn w-8 h-8 bg-blue-600 text-white rounded-lg font-extrabold text-sm">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 선택된 청중석 줄(Row) 단위 빠른 입력기 -->
+                    <div class="bg-white rounded-xl p-2.5 border border-blue-100">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-[11px] font-extrabold text-blue-800" id="active-seat-label">▶ 현재 선택: 왼쪽(창가) 줄 단위 더하기</span>
+                            <button onclick="app.undoSeatRow()" class="touch-btn text-[11px] text-rose-600 font-bold hover:underline">↩ 방금 줄 취소</button>
+                        </div>
+                        <div class="grid grid-cols-5 gap-1.5 mb-2">
+                            <button onclick="app.addSeatRow(1)" class="touch-btn bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200 py-2 rounded-lg text-xs font-extrabold">+1명</button>
+                            <button onclick="app.addSeatRow(2)" class="touch-btn bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200 py-2 rounded-lg text-xs font-extrabold">+2명</button>
+                            <button onclick="app.addSeatRow(3)" class="touch-btn bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200 py-2 rounded-lg text-xs font-extrabold">+3명</button>
+                            <button onclick="app.addSeatRow(4)" class="touch-btn bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200 py-2 rounded-lg text-xs font-extrabold">+4명</button>
+                            <button onclick="app.addSeatRow(5)" class="touch-btn bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200 py-2 rounded-lg text-xs font-extrabold">+5명</button>
+                        </div>
+                        <div class="text-[11px] text-slate-500 font-mono truncate" id="seat-row-log">줄 진행 기록: 없음</div>
+                    </div>
+                </div>
+
+                <!-- 3) 확성부 & 4) 청중석 뒤, 안내 -->
+                <div class="grid grid-cols-2 gap-2.5 mb-3">
+                    <div class="bg-slate-50 border border-slate-200/80 p-3 rounded-xl">
+                        <div class="text-xs font-extrabold text-slate-700 mb-2">3) 확성부</div>
+                        <div class="flex justify-between items-center">
+                            <button onclick="app.addZone('soundBooth', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold text-base">-</button>
+                            <input type="number" id="val-soundBooth" onchange="app.setZoneDirect('soundBooth', this.value)" class="w-12 text-center font-extrabold text-base bg-white border border-slate-200 rounded-lg py-1">
+                            <button onclick="app.addZone('soundBooth', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold text-base">+</button>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-200/80 p-3 rounded-xl">
+                        <div class="text-xs font-extrabold text-slate-700 mb-2">4) 청중석 뒤, 안내</div>
+                        <div class="flex justify-between items-center">
+                            <button onclick="app.addZone('rearAttendant', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold text-base">-</button>
+                            <input type="number" id="val-rearAttendant" onchange="app.setZoneDirect('rearAttendant', this.value)" class="w-12 text-center font-extrabold text-base bg-white border border-slate-200 rounded-lg py-1">
+                            <button onclick="app.addZone('rearAttendant', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold text-base">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5) 장로회의실 & 6) 실외 외출 (확인 체크 포함) -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="bg-slate-50 border border-slate-200/80 p-3 rounded-xl">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-extrabold text-slate-700">5) 장로회의실</span>
+                            <label class="text-[11px] flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded cursor-pointer">
+                                <input type="checkbox" id="check-eldersRoom" onchange="app.toggleZoneCheck('eldersRoom')" class="rounded text-emerald-600"> 확인
+                            </label>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <button onclick="app.addZone('eldersRoom', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold text-base">-</button>
+                            <input type="number" id="val-eldersRoom" onchange="app.setZoneDirect('eldersRoom', this.value)" class="w-12 text-center font-extrabold text-base bg-white border border-slate-200 rounded-lg py-1">
+                            <button onclick="app.addZone('eldersRoom', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold text-base">+</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 border border-slate-200/80 p-3 rounded-xl">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-extrabold text-slate-700">6) 실외 외출</span>
+                            <label class="text-[11px] flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded cursor-pointer">
+                                <input type="checkbox" id="check-outdoor" onchange="app.toggleZoneCheck('outdoor')" class="rounded text-emerald-600"> 확인
+                            </label>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <button onclick="app.addZone('outdoor', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold text-base">-</button>
+                            <input type="number" id="val-outdoor" onchange="app.setZoneDirect('outdoor', this.value)" class="w-12 text-center font-extrabold text-base bg-white border border-slate-200 rounded-lg py-1">
+                            <button onclick="app.addZone('outdoor', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold text-base">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 비대면 카운터 (2가지 입력 방식) -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                    <div>
+                        <h2 class="font-extrabold text-slate-800 text-base">💻 비대면 참석자 카운터</h2>
+                        <p class="text-[11px] text-slate-400">화면별 버튼 누적(방식 1) 또는 총인원 직접 입력(방식 2)</p>
+                    </div>
+                    <span class="bg-indigo-50 text-indigo-700 font-extrabold text-xs px-2.5 py-1 rounded-lg" id="label-online-sum">0명 (기기 0대)</span>
+                </div>
+
+                <!-- 방식 1: 화면(가구)별 원터치 누적 -->
+                <div class="bg-indigo-50/60 border border-indigo-100 p-3 rounded-xl mb-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-extrabold text-indigo-900">▶ 방식 1: 화면(가구)별 원터치 누적 (기기+1 동시 증가)</span>
+                        <button onclick="app.undoOnlineScreen()" class="touch-btn text-[11px] text-rose-600 font-bold hover:underline">↩ 방금 입력 취소</button>
+                    </div>
+                    <div class="grid grid-cols-5 gap-1.5 mb-2">
+                        <button onclick="app.addOnlineScreen(1)" class="touch-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200 py-2.5 rounded-xl text-xs font-extrabold shadow-sm">+1명 화면</button>
+                        <button onclick="app.addOnlineScreen(2)" class="touch-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200 py-2.5 rounded-xl text-xs font-extrabold shadow-sm">+2명 화면</button>
+                        <button onclick="app.addOnlineScreen(3)" class="touch-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200 py-2.5 rounded-xl text-xs font-extrabold shadow-sm">+3명 화면</button>
+                        <button onclick="app.addOnlineScreen(4)" class="touch-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200 py-2.5 rounded-xl text-xs font-extrabold shadow-sm">+4명 화면</button>
+                        <button onclick="app.addOnlineScreen(5)" class="touch-btn bg-white hover:bg-indigo-600 hover:text-white text-indigo-700 border border-indigo-200 py-2.5 rounded-xl text-xs font-extrabold shadow-sm">+5명 화면</button>
+                    </div>
+                    <div class="text-[11px] text-slate-600 font-mono truncate" id="online-screen-log">누적 내역: 없음</div>
+                </div>
+
+                <!-- 방식 2: 파악된 총인원 직접 입력 / 미세 조정 -->
+                <div class="bg-slate-50 border border-slate-200/80 p-3 rounded-xl">
+                    <span class="text-xs font-extrabold text-slate-700 block mb-2">▶ 방식 2: 파악된 총인원 직접 입력 및 미세 조정</span>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[11px] text-slate-500 font-bold block mb-1">접속 기기(계정) 수</label>
+                            <div class="flex items-center gap-1">
+                                <button onclick="app.adjustOnlineDirect('devices', -1)" class="touch-btn w-8 h-9 bg-slate-200 rounded-lg font-bold">-</button>
+                                <input type="number" id="input-online-devices" onchange="app.saveOnlineDirect()" class="w-full bg-white border border-slate-200 p-1.5 rounded-lg text-center font-extrabold text-base">
+                                <button onclick="app.adjustOnlineDirect('devices', 1)" class="touch-btn w-8 h-9 bg-indigo-600 text-white rounded-lg font-bold">+</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-slate-500 font-bold block mb-1">비대면 총 참석자 수</label>
+                            <div class="flex items-center gap-1">
+                                <button onclick="app.adjustOnlineDirect('total', -1)" class="touch-btn w-8 h-9 bg-slate-200 rounded-lg font-bold">-</button>
+                                <input type="number" id="input-online-total" onchange="app.saveOnlineDirect()" class="w-full bg-white border border-slate-200 p-1.5 rounded-lg text-center font-extrabold text-base text-indigo-700">
+                                <button onclick="app.adjustOnlineDirect('total', 1)" class="touch-btn w-8 h-9 bg-indigo-600 text-white rounded-lg font-bold">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== [탭 2] 임시 방문자 & 회중 모수 ==================== -->
+        <div id="tab-visitors" class="hidden space-y-4">
+
+            <!-- 당일 임시 참석자 4종 입력 -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
+                    <div>
+                        <h2 class="font-extrabold text-slate-800 text-base">🧳 당일 임시 참석자 입력 (4종)</h2>
+                        <p class="text-[11px] text-slate-400">실질 참석 통계 계산 시 분자에서 차감되는 외부 방문 인원</p>
+                    </div>
+                    <span class="bg-amber-50 text-amber-800 font-extrabold text-xs px-2.5 py-1 rounded-lg" id="label-temp-sum">합계: 0명</span>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                        <div>
+                            <span class="text-xs font-extrabold text-slate-700">1) 순회감독자 부부</span>
+                            <span class="text-[11px] text-slate-400 block">순회 방문 주간 참석</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="app.addTemp('circuitOverseer', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold">-</button>
+                            <span id="val-circuitOverseer" class="w-8 text-center font-extrabold text-base">0</span>
+                            <button onclick="app.addTemp('circuitOverseer', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                        <div>
+                            <span class="text-xs font-extrabold text-slate-700">2) 전파자학교 학생 수</span>
+                            <span class="text-[11px] text-slate-400 block">일시적 회중 방문 학생</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="app.addTemp('skeStudents', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold">-</button>
+                            <span id="val-skeStudents" class="w-8 text-center font-extrabold text-base">0</span>
+                            <button onclick="app.addTemp('skeStudents', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                        <div>
+                            <span class="text-xs font-extrabold text-slate-700">3) 공개강연 연사</span>
+                            <span class="text-[11px] text-slate-400 block">외부 초청 연사 및 동반 가족</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="app.addTemp('publicSpeaker', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold">-</button>
+                            <span id="val-publicSpeaker" class="w-8 text-center font-extrabold text-base">0</span>
+                            <button onclick="app.addTemp('publicSpeaker', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                        <div class="flex justify-between items-center mb-2">
+                            <div>
+                                <span class="text-xs font-extrabold text-slate-700">4) 특별 방문자</span>
+                                <span class="text-[11px] text-slate-400 block">여행객, 임시 기간 방문자, 기타</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="app.addTemp('specialVisitors', -1)" class="touch-btn w-9 h-9 bg-slate-200 rounded-lg font-extrabold">-</button>
+                                <span id="val-specialVisitors" class="w-8 text-center font-extrabold text-base">0</span>
+                                <button onclick="app.addTemp('specialVisitors', 1)" class="touch-btn w-9 h-9 bg-blue-600 text-white rounded-lg font-extrabold">+</button>
+                            </div>
+                        </div>
+                        <input type="text" id="input-specialNote" onchange="app.saveTempNote()" placeholder="특별 방문자 메모 입력 (예: 타 지역 가족 방문, 여행객 등)" class="w-full text-xs bg-white border border-slate-200 p-2 rounded-lg">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 회중 모수 현황 및 명단 기반 카운트 표시 -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                    <div>
+                        <h2 class="font-extrabold text-slate-800 text-base">📋 회중 기준 인원 및 명단 모수</h2>
+                        <p class="text-[11px] text-slate-400">전도인 수 및 명단 추가·삭제는 마스터(⚙️)에서 관리</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/60 flex justify-between items-center">
+                        <span class="font-bold text-slate-700">• 기본 전도인 수 (일반 통계 분모)</span>
+                        <span class="text-base font-black text-blue-700" id="pool-pub-count">0명</span>
+                    </div>
+
+                    <!-- 관심자 명단 -->
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="font-bold text-slate-700">• 정기 참석 관심자 (자녀·부모·연구생)</span>
+                            <span class="text-sm font-black text-indigo-700" id="pool-interested-count">0명</span>
+                        </div>
+                        <div id="view-interested-chips" class="flex flex-wrap gap-1 mt-1"></div>
+                    </div>
+
+                    <!-- 총인원 합계 -->
+                    <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl flex justify-between items-center">
+                        <span class="font-extrabold text-blue-900">▶ 총인원 (전도인 + 관심자)</span>
+                        <span class="text-base font-black text-blue-700" id="pool-total-count">0명</span>
+                    </div>
+
+                    <!-- 비대면 불가피 인원 명단 -->
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="font-bold text-slate-700">• 비대면으로만 참석 가능한 인원</span>
+                            <span class="text-sm font-black text-rose-600" id="pool-onlineonly-count">0명</span>
+                        </div>
+                        <div id="view-onlineonly-chips" class="flex flex-wrap gap-1 mt-1"></div>
+                    </div>
+
+                    <!-- 대면 집회 참석 가능 수 -->
+                    <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex justify-between items-center">
+                        <span class="font-extrabold text-emerald-900">▶ 대면 집회 참석 가능 인원수 (총인원 - 비대면전용)</span>
+                        <span class="text-base font-black text-emerald-700" id="pool-inperson-capable">0명</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== [탭 3] 월간 누적 통계표 & 보고서 ==================== -->
+        <div id="tab-monthly" class="hidden space-y-4">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                    <div>
+                        <h2 class="font-extrabold text-slate-800 text-base">📅 월간 집회 참석 누적 통계표</h2>
+                        <p class="text-[11px] text-slate-400">행(Row)을 터치하면 해당 날짜의 집회 카운터로 이동합니다</p>
+                    </div>
+                </div>
+
+                <!-- 평일집회 테이블 -->
+                <div class="mb-5">
+                    <h3 class="text-xs font-extrabold text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg mb-2">■ 1. 평일집회 (기본: 목요일 / 순회주간: 화요일)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                                    <th class="p-2">날짜/구분</th>
+                                    <th class="p-2 text-right">대면</th>
+                                    <th class="p-2 text-right">비대면</th>
+                                    <th class="p-2 text-right">총계</th>
+                                    <th class="p-2 text-right">일반%</th>
+                                    <th class="p-2 text-right">대면실질%</th>
+                                    <th class="p-2 text-right">전체실질%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-weekday"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 주말집회 테이블 -->
+                <div class="mb-4">
+                    <h3 class="text-xs font-extrabold text-indigo-800 bg-indigo-50 px-3 py-1.5 rounded-lg mb-2">■ 2. 주말집회 (기본: 일요일)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                                    <th class="p-2">날짜/구분</th>
+                                    <th class="p-2 text-right">대면</th>
+                                    <th class="p-2 text-right">비대면</th>
+                                    <th class="p-2 text-right">총계</th>
+                                    <th class="p-2 text-right">일반%</th>
+                                    <th class="p-2 text-right">대면실질%</th>
+                                    <th class="p-2 text-right">전체실질%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-weekend"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 보고서 복사 및 엑셀 다운로드 버튼 -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                    <button onclick="app.copyCurrentReport()" class="touch-btn bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-sm">📋 현재 회차 보고서 복사</button>
+                    <button onclick="app.exportMonthlyCSV()" class="touch-btn bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-extrabold text-xs shadow-sm">📊 월간 통계 엑셀(CSV) 저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 마스터 관리자 전용 모달 (1935 전용) -->
+    <div id="master-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 max-h-[92vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-200">
+                <h2 class="text-base font-extrabold text-slate-800">⚙️ 마스터 관리자 설정</h2>
+                <button onclick="app.closeMasterModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold">✕</button>
+            </div>
+
+            <div class="space-y-5 text-xs">
+                <!-- ① 현재 회차 일정/상태 변경 -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <h3 class="font-extrabold text-slate-800 text-sm mb-2">1. 현재 선택 회차 일정·상태 변경</h3>
+                    <div class="space-y-2.5">
+                        <div>
+                            <label class="text-slate-500 font-bold block mb-1">집회 진행 상태 선택</label>
+                            <select id="master-subtype" onchange="app.onMasterSubtypeChange()" class="w-full bg-white border border-slate-300 p-2.5 rounded-xl font-bold">
+                                <option value="normal">정상 진행 (목요일 평일 / 일요일 주말)</option>
+                                <option value="circuit">순회주간 (평일집회를 화요일로 이동)</option>
+                                <option value="memorial">기념식 (집회 대신 기념식 진행)</option>
+                                <option value="special">특별 모임 (특별 일정 진행)</option>
+                                <option value="none">집회 없음 (대회 기간 등 - 기록 및 월평균 제외)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-slate-500 font-bold block mb-1">실제 진행 날짜 (순회주간·특별모임 시 변경 가능)</label>
+                            <input type="date" id="master-custom-date" class="w-full bg-white border border-slate-300 p-2 rounded-xl font-bold">
+                        </div>
+                        <div>
+                            <label class="text-slate-500 font-bold block mb-1">비고 / 사유 메모</label>
+                            <input type="text" id="master-session-note" placeholder="예: 지역 대회, 순회감독자 방문, 기념식 주간 등" class="w-full bg-white border border-slate-300 p-2 rounded-xl">
+                        </div>
+                        <button onclick="app.saveMasterSessionConfig()" class="touch-btn w-full bg-blue-600 text-white py-2.5 rounded-xl font-extrabold">회차 일정 상태 저장</button>
+                    </div>
+                </div>
+
+                <!-- ② 회중 기준 인원 및 명단(태그) 관리 -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <h3 class="font-extrabold text-slate-800 text-sm mb-1">2. 회중 기준 인원 및 명단 카운트 설정</h3>
+                    <p class="text-[11px] text-slate-500 mb-3">이름을 추가하면 자동으로 인원수가 카운트되며 다음 달에도 자동 이월됩니다.</p>
+
+                    <!-- 기본 전도인 수 -->
+                    <div class="mb-3">
+                        <label class="text-slate-600 font-bold block mb-1">기본 전도인 수 (명)</label>
+                        <input type="number" id="master-pub-count" class="w-full bg-white border border-slate-300 p-2 rounded-xl font-extrabold text-sm">
+                    </div>
+
+                    <!-- 관심자 이름 직접 추가 -->
+                    <div class="mb-3 bg-white p-3 rounded-xl border border-slate-200">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="text-slate-700 font-extrabold">정기 참석 관심자 명단 (자녀·부모·연구생)</label>
+                            <span class="text-indigo-600 font-extrabold" id="master-interested-len">0명</span>
+                        </div>
+                        <div class="flex gap-1.5 mb-2">
+                            <input type="text" id="input-add-interested" onkeydown="if(event.key==='Enter') app.addPersonChip('interested')" placeholder="이름 입력 (예: 홍길동(연구생))" class="flex-1 border border-slate-300 p-2 rounded-lg">
+                            <button onclick="app.addPersonChip('interested')" class="touch-btn bg-indigo-600 text-white px-3 rounded-lg font-extrabold">+ 추가</button>
+                        </div>
+                        <div id="master-interested-chips" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+
+                    <!-- 비대면 전용 인원 이름 직접 추가 -->
+                    <div class="mb-3 bg-white p-3 rounded-xl border border-slate-200">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="text-slate-700 font-extrabold">비대면으로만 참석 가능한 인원 명단</label>
+                            <span class="text-rose-600 font-extrabold" id="master-onlineonly-len">0명</span>
+                        </div>
+                        <div class="flex gap-1.5 mb-2">
+                            <input type="text" id="input-add-onlineonly" onkeydown="if(event.key==='Enter') app.addPersonChip('onlineOnly')" placeholder="이름 입력 (예: 이순자)" class="flex-1 border border-slate-300 p-2 rounded-lg">
+                            <button onclick="app.addPersonChip('onlineOnly')" class="touch-btn bg-rose-600 text-white px-3 rounded-lg font-extrabold">+ 추가</button>
+                        </div>
+                        <div id="master-onlineonly-chips" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+
+                    <button onclick="app.saveMasterPoolConfig()" class="touch-btn w-full bg-slate-800 text-white py-2.5 rounded-xl font-extrabold">전도인 수 및 명단 저장</button>
+                </div>
+
+                <!-- ③ 접속 암호(PIN) 변경 -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <h3 class="font-extrabold text-slate-800 text-sm mb-1">3. 일반 / 마스터 암호 변경 (SHA-256 보안 적용)</h3>
+                    <p class="text-[11px] text-slate-500 mb-2">새 4자리 숫자를 입력하면 암호화되어 저장됩니다.</p>
+                    <div class="grid grid-cols-2 gap-2 mb-2.5">
+                        <input type="password" inputmode="numeric" maxlength="4" id="master-new-userpin" placeholder="새 일반 암호 (4자리)" class="bg-white border border-slate-300 p-2 rounded-xl text-center font-bold">
+                        <input type="password" inputmode="numeric" maxlength="4" id="master-new-masterpin" placeholder="새 마스터 암호 (4자리)" class="bg-white border border-slate-300 p-2 rounded-xl text-center font-bold">
+                    </div>
+                    <button onclick="app.saveMasterPins()" class="touch-btn w-full bg-slate-700 text-white py-2.5 rounded-xl font-extrabold">암호 변경 저장</button>
+                </div>
+
+                <!-- ④ 현재 회차 숫자 초기화 -->
+                <div class="bg-rose-50 p-4 rounded-2xl border border-rose-200">
+                    <h3 class="font-extrabold text-rose-800 text-sm mb-1">4. 현재 회차 카운터 초기화</h3>
+                    <p class="text-[11px] text-rose-600 mb-2.5">현재 선택된 회차의 대면·비대면·임시참석자 숫자를 모두 0으로 되돌립니다.</p>
+                    <button onclick="app.resetCurrentSession()" class="touch-btn w-full bg-rose-600 text-white py-2.5 rounded-xl font-extrabold">현재 회차 숫자 전체 0으로 초기화</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Modular SDK (v10) 및 애플리케이션 로직 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+        import {
+            getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot,
+            collection, getDocs, runTransaction
+        } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+        // =========================================================================
+        // 1. Firebase 설정 (제공해주신 실제 프로젝트 키 적용 완료)
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBavQoBaevqOh6AXcrQ6DXhgByoXWhQCAw",
+            authDomain: "meetcount-9761b.firebaseapp.com",
+            projectId: "meetcount-9761b",
+            storageBucket: "meetcount-9761b.firebasestorage.app",
+            messagingSenderId: "778322578759",
+            appId: "1:778322578759:web:6b512f64d327460c9e1062",
+            measurementId: "G-FXBE8TE45N"
+        };
+
+        const fbApp = initializeApp(firebaseConfig);
+        const auth = getAuth(fbApp);
+        const db = getFirestore(fbApp);
+
+        // =========================================================================
+        // 2. 보안 유틸리티: SHA-256 해시 변환 함수 (클라이언트 평문 PIN 노출 원천 차단)
+        // =========================================================================
+        async function sha256(str) {
+            const buf = new TextEncoder().encode(str);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buf);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // =========================================================================
+        // 3. 전역 상태 관리
+        // =========================================================================
+        const state = {
+            role: null,              // 'user' | 'master'
+            pinInput: "",
+            authHashes: { userPinHash: "", masterPinHash: "" },
+            currentMonth: "",        // 'YYYY-MM'
+            currentSessionId: "",    // 'YYYY-MM-DD-weekday' | 'YYYY-MM-DD-weekend'
+            activeSeatZone: "seatLeft",
+            monthPool: {
+                publisherCount: 100,
+                interestedList: [],
+                onlineOnlyList: []
+            },
+            sessionData: null,
+            allMonthSessionsMap: {},
+            unsubPool: null,
+            unsubSession: null,
+            unsubMonthAll: null
+        };
+
+        const SEAT_LABELS = {
+            seatLeft: "왼쪽(창가)",
+            seatCenter: "가운데",
+            seatRight: "오른쪽(벽쪽)"
+        };
+
+        const SUBTYPE_LABELS = {
+            normal: "정상",
+            circuit: "순회주간(화)",
+            memorial: "기념식",
+            special: "특별모임",
+            none: "집회없음"
+        };
+
+        // 기본 빈 회차 데이터 생성기
+        function createDefaultSessionDoc(meta) {
+            return {
+                id: meta.id,
+                category: meta.category, // 'weekday' | 'weekend'
+                defaultDate: meta.defaultDate,
+                actualDate: meta.defaultDate,
+                subType: "normal",
+                note: "",
+                inPerson: {
+                    platform: 0,
+                    seatLeft: 0,
+                    seatCenter: 0,
+                    seatRight: 0,
+                    soundBooth: 0,
+                    rearAttendant: 0,
+                    eldersRoom: 0,
+                    eldersRoomChecked: false,
+                    outdoor: 0,
+                    outdoorChecked: false,
+                    seatLogs: { seatLeft: [], seatCenter: [], seatRight: [] }
+                },
+                online: {
+                    devices: 0,
+                    total: 0,
+                    log: []
+                },
+                temp: {
+                    circuitOverseer: 0,
+                    skeStudents: 0,
+                    publicSpeaker: 0,
+                    specialVisitors: 0,
+                    specialNote: ""
+                }
+            };
+        }
+
+        // =========================================================================
+        // 4. 초기화 및 인증 (24시간 유지 + 백그라운드 익명 로그인)
+        // =========================================================================
+        async function initApp() {
+            // 백그라운드 익명 로그인 시도 (켜져 있으면 보안 세션 수립, 안 켜져 있어도 정상 작동)
+            try {
+                await signInAnonymously(auth);
+            } catch (e) {
+                console.info("익명 로그인 미설정 상태 (기본 모드로 동작):", e.code);
+            }
+
+            // 초기 해시 준비 (0000 / 1935)
+            const defaultUserHash = await sha256("0000");
+            const defaultMasterHash = await sha256("1935");
+            state.authHashes = { userPinHash: defaultUserHash, masterPinHash: defaultMasterHash };
+
+            try {
+                const authRef = doc(db, "settings", "auth");
+                const snap = await getDoc(authRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    state.authHashes.userPinHash = data.userPinHash || defaultUserHash;
+                    state.authHashes.masterPinHash = data.masterPinHash || defaultMasterHash;
+                } else {
+                    await setDoc(authRef, {
+                        userPinHash: defaultUserHash,
+                        masterPinHash: defaultMasterHash,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+            } catch (err) {
+                console.warn("인증 설정 조회 중 오프라인 기본값 사용:", err);
+            }
+
+            initMonthDropdown();
+            checkSavedAuth();
+        }
+
+        function checkSavedAuth() {
+            try {
+                const raw = localStorage.getItem("meetcount_auth_v2");
+                if (raw) {
+                    const saved = JSON.parse(raw);
+                    const now = Date.now();
+                    if (now < saved.expiresAt) {
+                        if (saved.role === "master" && saved.pinHash === state.authHashes.masterPinHash) {
+                            enterApp("master");
+                            return;
+                        }
+                        if (saved.role === "user" && saved.pinHash === state.authHashes.userPinHash) {
+                            enterApp("user");
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+            document.getElementById("auth-screen").classList.remove("hidden");
+        }
+
+        function pressPin(digit) {
+            if (state.pinInput.length < 4) {
+                state.pinInput += digit;
+                updatePinDisplay();
+                if (state.pinInput.length === 4) {
+                    setTimeout(() => submitPin(), 120);
+                }
+            }
+        }
+
+        function clearPin() {
+            state.pinInput = "";
+            document.getElementById("pin-error").innerText = "";
+            updatePinDisplay();
+        }
+
+        function updatePinDisplay() {
+            const filled = "●".repeat(state.pinInput.length);
+            const empty = "•".repeat(4 - state.pinInput.length);
+            document.getElementById("pin-display").innerText = filled + empty;
+        }
+
+        async function submitPin() {
+            if (state.pinInput.length !== 4) {
+                document.getElementById("pin-error").innerText = "4자리 숫자를 입력해주세요.";
+                return;
+            }
+            const inputHash = await sha256(state.pinInput);
+            const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24시간
+
+            if (inputHash === state.authHashes.masterPinHash) {
+                localStorage.setItem("meetcount_auth_v2", JSON.stringify({
+                    role: "master",
+                    pinHash: inputHash,
+                    expiresAt
+                }));
+                enterApp("master");
+            } else if (inputHash === state.authHashes.userPinHash) {
+                localStorage.setItem("meetcount_auth_v2", JSON.stringify({
+                    role: "user",
+                    pinHash: inputHash,
+                    expiresAt
+                }));
+                enterApp("user");
+            } else {
+                document.getElementById("pin-error").innerText = "암호가 일치하지 않습니다.";
+                state.pinInput = "";
+                updatePinDisplay();
+            }
+        }
+
+        function openPinSwitch() {
+            state.pinInput = "";
+            document.getElementById("pin-error").innerText = "";
+            updatePinDisplay();
+            document.getElementById("auth-screen").classList.remove("hidden");
+        }
+
+        function enterApp(role) {
+            state.role = role;
+            state.pinInput = "";
+            document.getElementById("auth-screen").classList.add("hidden");
+            document.getElementById("main-app").classList.remove("hidden");
+
+            const badge = document.getElementById("role-badge");
+            const masterBtn = document.getElementById("master-btn");
+            if (role === "master") {
+                badge.innerText = "마스터(1935)";
+                badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-extrabold";
+                masterBtn.classList.remove("hidden");
+            } else {
+                badge.innerText = "일반(0000)";
+                badge.className = "text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold";
+                masterBtn.classList.add("hidden");
+            }
+
+            subscribeMonthData(state.currentMonth);
+        }
+
+        // =========================================================================
+        // 5. 월간 일정(목요일 평일집회 / 일요일 주말집회) 계산기 (한국 시간 기준)
+        // =========================================================================
+        function formatLocalYYYYMMDD(y, m, d) {
+            return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        }
+
+        function getDayOfWeekKor(dateStr) {
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return days[new Date(y, m - 1, d).getDay()];
+        }
+
+        function shiftDateDays(dateStr, deltaDays) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            const dt = new Date(y, m - 1, d + deltaDays);
+            return formatLocalYYYYMMDD(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+        }
+
+        function generateMonthSchedule(ym) {
+            const [y, m] = ym.split('-').map(Number);
+            const list = [];
+            const daysInMonth = new Date(y, m, 0).getDate();
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dt = new Date(y, m - 1, d);
+                const dow = dt.getDay();
+                const dateStr = formatLocalYYYYMMDD(y, m, d);
+                if (dow === 4) {
+                    list.push({
+                        id: `${dateStr}-weekday`,
+                        category: "weekday",
+                        defaultDate: dateStr
+                    });
+                } else if (dow === 0) {
+                    list.push({
+                        id: `${dateStr}-weekend`,
+                        category: "weekend",
+                        defaultDate: dateStr
+                    });
+                }
+            }
+            return list;
+        }
+
+        function initMonthDropdown() {
+            const sel = document.getElementById("month-selector");
+            sel.innerHTML = "";
+            const now = new Date();
+            for (let offset = -3; offset <= 4; offset++) {
+                const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+                const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const opt = document.createElement("option");
+                opt.value = ym;
+                opt.innerText = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+                sel.appendChild(opt);
+            }
+            const curYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            sel.value = curYM;
+            state.currentMonth = curYM;
+        }
+
+        function onMonthChange() {
+            state.currentMonth = document.getElementById("month-selector").value;
+            subscribeMonthData(state.currentMonth);
+        }
+
+        function onSessionChange() {
+            state.currentSessionId = document.getElementById("session-selector").value;
+            subscribeSingleSession(state.currentMonth, state.currentSessionId);
+        }
+
+        // =========================================================================
+        // 6. Firestore 실시간 구독 (월간 모수 자동 이월 + 회차 목록 + 실시간 카운터)
+        // =========================================================================
+        async function subscribeMonthData(ym) {
+            if (state.unsubPool) state.unsubPool();
+            if (state.unsubMonthAll) state.unsubMonthAll();
+
+            const monthRef = doc(db, "months", ym);
+
+            // 해당 월 모수 문서가 없으면 직전 월 데이터를 찾아 자동 이월
+            try {
+                const snap = await getDoc(monthRef);
+                if (!snap.exists()) {
+                    const [y, m] = ym.split('-').map(Number);
+                    const prevDate = new Date(y, m - 2, 1);
+                    const prevYM = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+                    const prevSnap = await getDoc(doc(db, "months", prevYM));
+                    const initPool = prevSnap.exists() ? {
+                        publisherCount: prevSnap.data().publisherCount ?? 100,
+                        interestedList: prevSnap.data().interestedList ?? [],
+                        onlineOnlyList: prevSnap.data().onlineOnlyList ?? []
+                    } : {
+                        publisherCount: 100,
+                        interestedList: [],
+                        onlineOnlyList: []
+                    };
+                    await setDoc(monthRef, initPool, { merge: true });
+                }
+            } catch (e) {
+                console.warn("월간 모수 초기화 확인 오류:", e);
+            }
+
+            // 1) 월간 모수 실시간 리스너
+            state.unsubPool = onSnapshot(monthRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const d = docSnap.data();
+                    state.monthPool = {
+                        publisherCount: Number(d.publisherCount ?? 100),
+                        interestedList: Array.isArray(d.interestedList) ? d.interestedList : [],
+                        onlineOnlyList: Array.isArray(d.onlineOnlyList) ? d.onlineOnlyList : []
+                    };
+                    renderPoolSection();
+                    renderDashboardAndStats();
+                    renderMonthlyTables();
+                }
+            });
+
+            // 2) 해당 월의 전체 세션 컬렉션 실시간 리스너
+            const baseSchedule = generateMonthSchedule(ym);
+            const sessionsColRef = collection(db, "months", ym, "sessions");
+
+            state.unsubMonthAll = onSnapshot(sessionsColRef, (querySnap) => {
+                const map = {};
+                querySnap.forEach(sDoc => {
+                    map[sDoc.id] = sDoc.data();
+                });
+                state.allMonthSessionsMap = map;
+                populateSessionDropdown(baseSchedule, map);
+                renderMonthlyTables();
+            });
+
+            // 오늘 날짜와 가장 가까운 회차 자동 선택
+            const todayStr = formatLocalYYYYMMDD(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
+            let chosen = baseSchedule.find(s => s.defaultDate >= todayStr) || baseSchedule[baseSchedule.length - 1];
+            state.currentSessionId = chosen.id;
+            subscribeSingleSession(ym, state.currentSessionId);
+        }
+
+        function populateSessionDropdown(baseSchedule, map) {
+            const sel = document.getElementById("session-selector");
+            sel.innerHTML = "";
+            baseSchedule.forEach(item => {
+                const saved = map[item.id];
+                const actualDate = (saved && saved.actualDate) ? saved.actualDate : item.defaultDate;
+                const dow = getDayOfWeekKor(actualDate);
+                const catName = item.category === "weekday" ? "평일집회" : "주말집회";
+                const subType = saved ? saved.subType : "normal";
+                const statusTag = subType !== "normal" ? ` [${SUBTYPE_LABELS[subType] || subType}]` : "";
+
+                const opt = document.createElement("option");
+                opt.value = item.id;
+                opt.innerText = `${actualDate.slice(5)} (${dow}) ${catName}${statusTag}`;
+                sel.appendChild(opt);
+            });
+            if (state.currentSessionId) {
+                sel.value = state.currentSessionId;
+            }
+        }
+
+        function subscribeSingleSession(ym, sessionId) {
+            if (state.unsubSession) state.unsubSession();
+
+            const baseSchedule = generateMonthSchedule(ym);
+            const meta = baseSchedule.find(s => s.id === sessionId) || {
+                id: sessionId,
+                category: sessionId.includes("weekday") ? "weekday" : "weekend",
+                defaultDate: sessionId.slice(0, 10)
+            };
+
+            const sessionRef = doc(db, "months", ym, "sessions", sessionId);
+            state.unsubSession = onSnapshot(sessionRef, async (docSnap) => {
+                if (!docSnap.exists()) {
+                    const defaultData = createDefaultSessionDoc(meta);
+                    try {
+                        await setDoc(sessionRef, defaultData);
+                    } catch (e) {
+                        console.error("회차 초기 생성 오류:", e);
+                    }
+                    state.sessionData = defaultData;
+                } else {
+                    state.sessionData = docSnap.data();
+                }
+                renderCounterUI();
+                renderDashboardAndStats();
+            });
+        }
+
+        // =========================================================================
+        // 7. 화면 렌더링 및 통계 산출 로직
+        // =========================================================================
+        function getInPersonSum(ip) {
+            if (!ip) return 0;
+            return (Number(ip.platform) || 0) +
+                   (Number(ip.seatLeft) || 0) +
+                   (Number(ip.seatCenter) || 0) +
+                   (Number(ip.seatRight) || 0) +
+                   (Number(ip.soundBooth) || 0) +
+                   (Number(ip.rearAttendant) || 0) +
+                   (Number(ip.eldersRoom) || 0) +
+                   (Number(ip.outdoor) || 0);
+        }
+
+        function getTempSum(tp) {
+            if (!tp) return 0;
+            return (Number(tp.circuitOverseer) || 0) +
+                   (Number(tp.skeStudents) || 0) +
+                   (Number(tp.publicSpeaker) || 0) +
+                   (Number(tp.specialVisitors) || 0);
+        }
+
+        function renderCounterUI() {
+            const d = state.sessionData;
+            if (!d) return;
+
+            // 집회 없음 배너 제어
+            const noBanner = document.getElementById("no-meeting-banner");
+            if (d.subType === "none") {
+                noBanner.classList.remove("hidden");
+                document.getElementById("no-meeting-reason").innerText = `사유: ${d.note || '대회 기간 또는 집회 미실시'} (월평균 계산 분모에서 자동 제외됨)`;
+            } else {
+                noBanner.classList.add("hidden");
+            }
+
+            const ip = d.inPerson || {};
+            document.getElementById("val-platform").value = ip.platform || 0;
+            document.getElementById("val-seatLeft").innerText = ip.seatLeft || 0;
+            document.getElementById("val-seatCenter").innerText = ip.seatCenter || 0;
+            document.getElementById("val-seatRight").innerText = ip.seatRight || 0;
+            document.getElementById("val-soundBooth").value = ip.soundBooth || 0;
+            document.getElementById("val-rearAttendant").value = ip.rearAttendant || 0;
+            document.getElementById("val-eldersRoom").value = ip.eldersRoom || 0;
+            document.getElementById("val-outdoor").value = ip.outdoor || 0;
+
+            document.getElementById("check-eldersRoom").checked = !!ip.eldersRoomChecked;
+            document.getElementById("check-outdoor").checked = !!ip.outdoorChecked;
+
+            const seatSum = (Number(ip.seatLeft) || 0) + (Number(ip.seatCenter) || 0) + (Number(ip.seatRight) || 0);
+            document.getElementById("label-seats-sum").innerText = `청중석 소계: ${seatSum}명`;
+
+            // 청중석 줄 로그 표시
+            const logsObj = ip.seatLogs || {};
+            const activeLogArr = logsObj[state.activeSeatZone] || [];
+            document.getElementById("seat-row-log").innerText = activeLogArr.length > 0
+                ? `${SEAT_LABELS[state.activeSeatZone]} 줄 기록 (${activeLogArr.length}줄): ${activeLogArr.join(' + ')}`
+                : `${SEAT_LABELS[state.activeSeatZone]} 줄 기록: 아직 없음`;
+
+            // 비대면 렌더링
+            const on = d.online || { devices: 0, total: 0, log: [] };
+            document.getElementById("input-online-devices").value = on.devices || 0;
+            document.getElementById("input-online-total").value = on.total || 0;
+            const onLog = on.log || [];
+            document.getElementById("online-screen-log").innerText = onLog.length > 0
+                ? `총 ${onLog.length}화면 누적: ${onLog.slice(-8).join(' → ')}`
+                : "누적 내역: 없음";
+
+            // 임시 참석자 4종 렌더링
+            const tp = d.temp || {};
+            document.getElementById("val-circuitOverseer").innerText = tp.circuitOverseer || 0;
+            document.getElementById("val-skeStudents").innerText = tp.skeStudents || 0;
+            document.getElementById("val-publicSpeaker").innerText = tp.publicSpeaker || 0;
+            document.getElementById("val-specialVisitors").innerText = tp.specialVisitors || 0;
+            document.getElementById("input-specialNote").value = tp.specialNote || "";
+        }
+
+        function renderPoolSection() {
+            const p = state.monthPool;
+            const pubCount = Number(p.publisherCount) || 0;
+            const intList = p.interestedList || [];
+            const onOnlyList = p.onlineOnlyList || [];
+
+            const totalPool = pubCount + intList.length;
+            const inPersonCapable = Math.max(0, totalPool - onOnlyList.length);
+
+            document.getElementById("pool-pub-count").innerText = `${pubCount}명`;
+            document.getElementById("pool-interested-count").innerText = `${intList.length}명`;
+            document.getElementById("pool-total-count").innerText = `${totalPool}명`;
+            document.getElementById("pool-onlineonly-count").innerText = `${onOnlyList.length}명`;
+            document.getElementById("pool-inperson-capable").innerText = `${inPersonCapable}명`;
+
+            // 명단 칩 표시
+            const intContainer = document.getElementById("view-interested-chips");
+            intContainer.innerHTML = intList.length > 0
+                ? intList.map(name => `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full text-[11px] font-bold">${name}</span>`).join("")
+                : `<span class="text-slate-400 text-[11px]">등록된 관심자 명단 없음</span>`;
+
+            const onContainer = document.getElementById("view-onlineonly-chips");
+            onContainer.innerHTML = onOnlyList.length > 0
+                ? onOnlyList.map(name => `<span class="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full text-[11px] font-bold">${name}</span>`).join("")
+                : `<span class="text-slate-400 text-[11px]">등록된 비대면 전용 명단 없음</span>`;
+        }
+
+        function calculateSessionStats(sessionDoc, pool) {
+            const ipSum = getInPersonSum(sessionDoc?.inPerson);
+            const onSum = Number(sessionDoc?.online?.total) || 0;
+            const onDev = Number(sessionDoc?.online?.devices) || 0;
+            const grandTotal = ipSum + onSum;
+            const tempSum = getTempSum(sessionDoc?.temp);
+
+            const pubCount = Number(pool.publisherCount) || 0;
+            const totalPool = pubCount + (pool.interestedList?.length || 0);
+            const inPersonCapable = Math.max(0, totalPool - (pool.onlineOnlyList?.length || 0));
+
+            const generalRate = pubCount > 0 ? ((grandTotal / pubCount) * 100) : 0;
+            const realInPersonNum = Math.max(0, ipSum - tempSum);
+            const realInPersonRate = inPersonCapable > 0 ? ((realInPersonNum / inPersonCapable) * 100) : 0;
+            const realTotalNum = Math.max(0, grandTotal - tempSum);
+            const realTotalRate = totalPool > 0 ? ((realTotalNum / totalPool) * 100) : 0;
+
+            return {
+                ipSum, onSum, onDev, grandTotal, tempSum,
+                pubCount, totalPool, inPersonCapable,
+                realInPersonNum, realTotalNum,
+                generalRate, realInPersonRate, realTotalRate
+            };
+        }
+
+        function renderDashboardAndStats() {
+            if (!state.sessionData) return;
+            const st = calculateSessionStats(state.sessionData, state.monthPool);
+            const ip = state.sessionData.inPerson || {};
+            const seatSum = (Number(ip.seatLeft) || 0) + (Number(ip.seatCenter) || 0) + (Number(ip.seatRight) || 0);
+
+            document.getElementById("session-status-badge").innerText = SUBTYPE_LABELS[state.sessionData.subType] || "정상";
+            document.getElementById("dash-grand-total").innerText = `${st.grandTotal}명`;
+            document.getElementById("dash-pub-count").innerText = st.pubCount;
+            document.getElementById("dash-general-rate").innerText = `${st.generalRate.toFixed(1)}%`;
+
+            document.getElementById("dash-inperson").innerText = `${st.ipSum}명`;
+            document.getElementById("dash-seat-sub").innerText = `청중석 ${seatSum}명`;
+            document.getElementById("dash-online").innerText = `${st.onSum}명`;
+            document.getElementById("dash-online-dev").innerText = `기기 ${st.onDev}대`;
+            document.getElementById("dash-temp").innerText = `${st.tempSum}명`;
+
+            document.getElementById("dash-real-inperson-formula").innerText = `(${st.ipSum}-${st.tempSum}) / 대면가능 ${st.inPersonCapable}명`;
+            document.getElementById("dash-real-inperson-rate").innerText = `${st.realInPersonRate.toFixed(1)}% (${st.realInPersonNum}명)`;
+
+            document.getElementById("dash-real-total-formula").innerText = `(${st.grandTotal}-${st.tempSum}) / 총인원 ${st.totalPool}명`;
+            document.getElementById("dash-real-total-rate").innerText = `${st.realTotalRate.toFixed(1)}% (${st.realTotalNum}명)`;
+
+            document.getElementById("label-inperson-sum").innerText = `소계: ${st.ipSum}명`;
+            document.getElementById("label-online-sum").innerText = `${st.onSum}명 (기기 ${st.onDev}대)`;
+            document.getElementById("label-temp-sum").innerText = `합계: ${st.tempSum}명`;
+        }
+
+        // =========================================================================
+        // 8. 카운터 조작 트랜잭션 함수 (다중 기기 동시 입력 충돌 방지)
+        // =========================================================================
+        async function addZone(field, delta) {
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await runTransaction(db, async (tx) => {
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    const cur = Number(data.inPerson?.[field]) || 0;
+                    const next = Math.max(0, cur + delta);
+                    tx.update(ref, { [`inPerson.${field}`]: next });
+                });
+            } catch (err) {
+                console.error("구역 카운트 업데이트 실패:", err);
+            }
+        }
+
+        async function setZoneDirect(field, val) {
+            const num = Math.max(0, parseInt(val, 10) || 0);
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await updateDoc(ref, { [`inPerson.${field}`]: num });
+            } catch (err) {
+                console.error("구역 직접 입력 오류:", err);
+            }
+        }
+
+        async function toggleZoneCheck(field) {
+            const checked = document.getElementById(`check-${field}`).checked;
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await updateDoc(ref, { [`inPerson.${field}Checked`]: checked });
+            } catch (err) {
+                console.error("체크박스 업데이트 오류:", err);
+            }
+        }
+
+        function selectSeatZone(zone) {
+            state.activeSeatZone = zone;
+            ["seatLeft", "seatCenter", "seatRight"].forEach(z => {
+                const card = document.getElementById(`card-${z}`);
+                if (z === zone) {
+                    card.className = "cursor-pointer bg-white border-2 border-blue-600 rounded-xl p-2.5 text-center shadow-sm transition";
+                } else {
+                    card.className = "cursor-pointer bg-white border-2 border-slate-200 rounded-xl p-2.5 text-center shadow-sm transition";
+                }
+            });
+            document.getElementById("active-seat-label").innerText = `▶ 현재 선택: ${SEAT_LABELS[zone]} 줄 단위 더하기`;
+            renderCounterUI();
+        }
+
+        async function addSeatRow(count) {
+            const zone = state.activeSeatZone;
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await runTransaction(db, async (tx) => {
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    const ip = data.inPerson || {};
+                    ip[zone] = Math.max(0, (Number(ip[zone]) || 0) + count);
+                    if (!ip.seatLogs) ip.seatLogs = { seatLeft: [], seatCenter: [], seatRight: [] };
+                    if (!Array.isArray(ip.seatLogs[zone])) ip.seatLogs[zone] = [];
+                    ip.seatLogs[zone].push(count);
+                    tx.update(ref, { inPerson: ip });
+                });
+            } catch (err) {
+                console.error("줄 단위 가산 오류:", err);
+            }
+        }
+
+        async function undoSeatRow() {
+            const zone = state.activeSeatZone;
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await runTransaction(db, async (tx) => {
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    const ip = data.inPerson || {};
+                    const logs = ip.seatLogs?.[zone] || [];
+                    if (logs.length === 0) return;
+                    const lastAdded = logs.pop();
+                    ip[zone] = Math.max(0, (Number(ip[zone]) || 0) - lastAdded);
+                    tx.update(ref, { inPerson: ip });
+                });
+            } catch (err) {
+                console.error("줄 취소 오류:", err);
+            }
+        }
+
+        // 비대면 카운터 조작
+        async function addOnlineScreen(peopleCount) {
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await runTransaction(db, async (tx) => {
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    const on = data.online || { devices: 0, total: 0, log: [] };
+                    on.devices = (Number(on.devices) || 0) + 1;
+                    on.total = (Number(on.total) || 0) + peopleCount;
+                    if (!Array.isArray(on.log)) on.log = [];
+                    on.log.push(peopleCount);
+                    tx.update(ref, { online: on });
+                });
+            } catch (err) {
+                console.error("비대면 화면 가산 오류:", err);
+            }
+        }
+
+        async function undoOnlineScreen() {
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await runTransaction(db, async (tx) => {
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    const on = data.online || { devices: 0, total: 0, log: [] };
+                    if (!Array.isArray(on.log) || on.log.length === 0) return;
+                    const last = on.log.pop();
+                    on.devices = Math.max(0, (Number(on.devices) || 0) - 1);
+                    on.total = Math.max(0, (Number(on.total) || 0) - Number(last));
+                    tx.update(ref, { online: on });
+                });
+            } catch (err) {
+                console.error("비대면 입력 취소 오류:", err);
+            }
+        }
+
+        async function adjustOnlineDirect(field, delta) {
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await runTransaction(db, async (tx) => {
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    const on = data.online || { devices: 0, total: 0, log: [] };
+                    on[field] = Math.max(0, (Number(on[field]) || 0) + delta);
+                    tx.update(ref, { online: on });
+                });
+            } catch (err) {
+                console.error("비대면 미세 조정 오류:", err);
+            }
+        }
+
+        async function saveOnlineDirect() {
+            const devices = Math.max(0, parseInt(document.getElementById("input-online-devices").value, 10) || 0);
+            const total = Math.max(0, parseInt(document.getElementById("input-online-total").value, 10) || 0);
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await updateDoc(ref, {
+                    "online.devices": devices,
+                    "online.total": total
+                });
+            } catch (err) {
+                console.error("비대면 직접 저장 오류:", err);
+            }
+        }
+
+        // 임시 참석자 조작
+        async function addTemp(field, delta) {
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await runTransaction(db, async (tx) => {
+                    const snap = await tx.get(ref);
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    const tp = data.temp || {};
+                    tp[field] = Math.max(0, (Number(tp[field]) || 0) + delta);
+                    tx.update(ref, { temp: tp });
+                });
+            } catch (err) {
+                console.error("임시 참석자 업데이트 오류:", err);
+            }
+        }
+
+        async function saveTempNote() {
+            const note = document.getElementById("input-specialNote").value.trim();
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await updateDoc(ref, { "temp.specialNote": note });
+            } catch (err) {
+                console.error("임시 참석자 메모 오류:", err);
+            }
+        }
+
+        // =========================================================================
+        // 9. 월간 통계표 렌더링 및 보고서/CSV 내보내기
+        // =========================================================================
+        function renderMonthlyTables() {
+            const baseSchedule = generateMonthSchedule(state.currentMonth);
+            const weekdays = baseSchedule.filter(s => s.category === "weekday");
+            const weekends = baseSchedule.filter(s => s.category === "weekend");
+
+            renderCategoryTable("tbody-weekday", weekdays);
+            renderCategoryTable("tbody-weekend", weekends);
+        }
+
+        function renderCategoryTable(tbodyId, scheduleItems) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+
+            let sumIp = 0, sumOn = 0, sumGrand = 0, sumTemp = 0;
+            let activeCount = 0;
+            let rowsHtml = "";
+
+            scheduleItems.forEach((item, idx) => {
+                const docData = state.allMonthSessionsMap[item.id] || createDefaultSessionDoc(item);
+                const actualDate = docData.actualDate || item.defaultDate;
+                const dow = getDayOfWeekKor(actualDate);
+                const subType = docData.subType || "normal";
+                const isCurrent = item.id === state.currentSessionId;
+
+                if (subType === "none") {
+                    rowsHtml += `
+                        <tr onclick="app.jumpToSession('${item.id}')" class="cursor-pointer border-b border-slate-100 bg-amber-50/50 text-slate-400">
+                            <td class="p-2 font-bold">${idx + 1}주 ${actualDate.slice(5)}(${dow})</td>
+                            <td colspan="6" class="p-2 text-center font-bold text-amber-700">[집회 없음: ${docData.note || '제외'}]</td>
+                        </tr>`;
+                    return;
+                }
+
+                const st = calculateSessionStats(docData, state.monthPool);
+                if (st.grandTotal > 0) {
+                    sumIp += st.ipSum;
+                    sumOn += st.onSum;
+                    sumGrand += st.grandTotal;
+                    sumTemp += st.tempSum;
+                    activeCount++;
+                }
+
+                const badge = subType !== "normal" ? `<span class="text-[10px] text-indigo-600 block">${SUBTYPE_LABELS[subType]}</span>` : "";
+                rowsHtml += `
+                    <tr onclick="app.jumpToSession('${item.id}')" class="cursor-pointer border-b border-slate-100 hover:bg-blue-50/40 ${isCurrent ? 'bg-blue-50/80 font-extrabold text-blue-900' : ''}">
+                        <td class="p-2">${idx + 1}주 ${actualDate.slice(5)}(${dow})${badge}</td>
+                        <td class="p-2 text-right">${st.ipSum}</td>
+                        <td class="p-2 text-right">${st.onSum}</td>
+                        <td class="p-2 text-right font-bold">${st.grandTotal}</td>
+                        <td class="p-2 text-right">${st.generalRate.toFixed(1)}%</td>
+                        <td class="p-2 text-right text-emerald-700">${st.realInPersonRate.toFixed(1)}%</td>
+                        <td class="p-2 text-right text-emerald-700">${st.realTotalRate.toFixed(1)}%</td>
+                    </tr>`;
+            });
+
+            // 월 합계 및 평균 행 계산 (집회 없음 및 미진행 0명 회차 제외)
+            const avgIp = activeCount > 0 ? (sumIp / activeCount).toFixed(1) : "0.0";
+            const avgOn = activeCount > 0 ? (sumOn / activeCount).toFixed(1) : "0.0";
+            const avgGrand = activeCount > 0 ? (sumGrand / activeCount).toFixed(1) : "0.0";
+
+            const pubCount = Number(state.monthPool.publisherCount) || 100;
+            const totalPool = pubCount + (state.monthPool.interestedList?.length || 0);
+            const inPersonCapable = Math.max(0, totalPool - (state.monthPool.onlineOnlyList?.length || 0));
+
+            const avgGenRate = (activeCount > 0 && pubCount > 0) ? (((sumGrand / activeCount) / pubCount) * 100).toFixed(1) : "0.0";
+            const avgRealIpRate = (activeCount > 0 && inPersonCapable > 0) ? ((((sumIp - sumTemp) / activeCount) / inPersonCapable) * 100).toFixed(1) : "0.0";
+            const avgRealTotRate = (activeCount > 0 && totalPool > 0) ? ((((sumGrand - sumTemp) / activeCount) / totalPool) * 100).toFixed(1) : "0.0";
+
+            rowsHtml += `
+                <tr class="bg-slate-100 font-extrabold text-slate-800 border-t-2 border-slate-300">
+                    <td class="p-2">합계 (${activeCount}회)</td>
+                    <td class="p-2 text-right">${sumIp}</td>
+                    <td class="p-2 text-right">${sumOn}</td>
+                    <td class="p-2 text-right text-blue-700">${sumGrand}</td>
+                    <td class="p-2 text-right">-</td>
+                    <td class="p-2 text-right">-</td>
+                    <td class="p-2 text-right">-</td>
+                </tr>
+                <tr class="bg-blue-50/70 font-extrabold text-blue-900">
+                    <td class="p-2">월평균</td>
+                    <td class="p-2 text-right">${avgIp}</td>
+                    <td class="p-2 text-right">${avgOn}</td>
+                    <td class="p-2 text-right text-blue-700">${avgGrand}</td>
+                    <td class="p-2 text-right">${avgGenRate}%</td>
+                    <td class="p-2 text-right text-emerald-700">${avgRealIpRate}%</td>
+                    <td class="p-2 text-right text-emerald-700">${avgRealTotRate}%</td>
+                </tr>`;
+
+            tbody.innerHTML = rowsHtml;
+        }
+
+        function jumpToSession(sessionId) {
+            state.currentSessionId = sessionId;
+            document.getElementById("session-selector").value = sessionId;
+            subscribeSingleSession(state.currentMonth, sessionId);
+            switchTab("counter");
+        }
+
+        function copyCurrentReport() {
+            if (!state.sessionData) return;
+            const d = state.sessionData;
+            const st = calculateSessionStats(d, state.monthPool);
+            const ip = d.inPerson || {};
+            const tp = d.temp || {};
+            const actualDate = d.actualDate || d.defaultDate;
+            const dow = getDayOfWeekKor(actualDate);
+            const catName = d.category === "weekday" ? "평일집회" : "주말집회";
+
+            const report = [
+                `[MeetCount 집회 참석 보고]`,
+                `• 일시: ${actualDate} (${dow}) ${catName} [${SUBTYPE_LABELS[d.subType] || '정상'}]`,
+                `• 총 참석자: ${st.grandTotal}명 (전도인 ${st.pubCount}명 대비 ${st.generalRate.toFixed(1)}%)`,
+                `  ├─ 대면 합계: ${st.ipSum}명 (연단 ${ip.platform||0}, 좌 ${ip.seatLeft||0}, 중 ${ip.seatCenter||0}, 우 ${ip.seatRight||0}, 확성 ${ip.soundBooth||0}, 안내 ${ip.rearAttendant||0}, 회의실 ${ip.eldersRoom||0}, 실외 ${ip.outdoor||0})`,
+                `  └─ 비대면 합계: ${st.onSum}명 (접속 기기 ${st.onDev}대)`,
+                `• 임시 참석자: ${st.tempSum}명 (순회감독자 ${tp.circuitOverseer||0}, 전파자학생 ${tp.skeStudents||0}, 연사 ${tp.publicSpeaker||0}, 특별방문 ${tp.specialVisitors||0}${tp.specialNote ? ' - ' + tp.specialNote : ''})`,
+                `• 실질 참석 분석:`,
+                `  ├─ 대면 실질 참석률: ${st.realInPersonRate.toFixed(1)}% (${st.realInPersonNum}명 / 대면가능 ${st.inPersonCapable}명)`,
+                `  └─ 전체 실질 참석률: ${st.realTotalRate.toFixed(1)}% (${st.realTotalNum}명 / 총인원 ${st.totalPool}명)`
+            ].join("\n");
+
+            navigator.clipboard.writeText(report).then(() => {
+                alert("현재 회차 보고서 텍스트가 복사되었습니다. 카카오톡이나 메신저에 붙여넣기 하세요!");
+            });
+        }
+
+        function exportMonthlyCSV() {
+            const baseSchedule = generateMonthSchedule(state.currentMonth);
+            let csv = "\uFEFF날짜,요일,구분,상태,연단,청중석(좌),청중석(중),청중석(우),확성부,뒤안내,장로회의실,실외외출,대면합계,비대면기기,비대면합계,총참석자,임시참석자합계,일반참석률(%),대면실질참석률(%),전체실질참석률(%),비고\n";
+
+            baseSchedule.forEach(item => {
+                const d = state.allMonthSessionsMap[item.id] || createDefaultSessionDoc(item);
+                const st = calculateSessionStats(d, state.monthPool);
+                const ip = d.inPerson || {};
+                const actualDate = d.actualDate || item.defaultDate;
+                const dow = getDayOfWeekKor(actualDate);
+                const catName = item.category === "weekday" ? "평일집회" : "주말집회";
+                const status = SUBTYPE_LABELS[d.subType] || "정상";
+                const note = (d.note || d.temp?.specialNote || "").replace(/,/g, " ");
+
+                csv += `${actualDate},${dow},${catName},${status},${ip.platform||0},${ip.seatLeft||0},${ip.seatCenter||0},${ip.seatRight||0},${ip.soundBooth||0},${ip.rearAttendant||0},${ip.eldersRoom||0},${ip.outdoor||0},${st.ipSum},${st.onDev},${st.onSum},${st.grandTotal},${st.tempSum},${st.generalRate.toFixed(1)},${st.realInPersonRate.toFixed(1)},${st.realTotalRate.toFixed(1)},${note}\n`;
+            });
+
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `MeetCount_${state.currentMonth}_집회참석통계.csv`;
+            a.click();
+        }
+
+        // =========================================================================
+        // 10. 마스터 관리자 모달 제어 (회차 수정, 명단 칩 추가/삭제, 암호 변경)
+        // =========================================================================
+        let tempInterestedChips = [];
+        let tempOnlineOnlyChips = [];
+
+        function openMasterModal() {
+            if (state.role !== "master") {
+                alert("마스터 권한(1935)으로 로그인해야 사용할 수 있습니다.");
+                return;
+            }
+            const d = state.sessionData || {};
+            document.getElementById("master-subtype").value = d.subType || "normal";
+            document.getElementById("master-custom-date").value = d.actualDate || d.defaultDate || "";
+            document.getElementById("master-session-note").value = d.note || "";
+
+            document.getElementById("master-pub-count").value = state.monthPool.publisherCount || 100;
+            tempInterestedChips = [...(state.monthPool.interestedList || [])];
+            tempOnlineOnlyChips = [...(state.monthPool.onlineOnlyList || [])];
+            renderMasterChips();
+
+            document.getElementById("master-modal").classList.remove("hidden");
+        }
+
+        function closeMasterModal() {
+            document.getElementById("master-modal").classList.add("hidden");
+        }
+
+        function onMasterSubtypeChange() {
+            const subType = document.getElementById("master-subtype").value;
+            const d = state.sessionData;
+            if (!d) return;
+            if (subType === "circuit" && d.category === "weekday") {
+                // 순회주간 선택 시 목요일 기본 날짜에서 화요일(-2일)로 자동 변경
+                document.getElementById("master-custom-date").value = shiftDateDays(d.defaultDate, -2);
+            } else if (subType === "normal") {
+                document.getElementById("master-custom-date").value = d.defaultDate;
+            }
+        }
+
+        async function saveMasterSessionConfig() {
+            const subType = document.getElementById("master-subtype").value;
+            const actualDate = document.getElementById("master-custom-date").value;
+            const note = document.getElementById("master-session-note").value.trim();
+
+            const ref = doc(db, "months", state.currentMonth, "sessions", state.currentSessionId);
+            try {
+                await updateDoc(ref, { subType, actualDate, note });
+                alert("회차 일정 및 상태가 저장되었습니다.");
+                closeMasterModal();
+            } catch (err) {
+                alert("저장 중 오류가 발생했습니다: " + err.message);
+            }
+        }
+
+        function renderMasterChips() {
+            document.getElementById("master-interested-len").innerText = `${tempInterestedChips.length}명`;
+            document.getElementById("master-interested-chips").innerHTML = tempInterestedChips.map((name, idx) => `
+                <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-800 border border-indigo-200 px-2.5 py-1 rounded-full text-xs font-bold">
+                    ${name}
+                    <button onclick="app.removePersonChip('interested', ${idx})" class="text-indigo-400 hover:text-rose-600 font-extrabold">✕</button>
+                </span>
+            `).join("");
+
+            document.getElementById("master-onlineonly-len").innerText = `${tempOnlineOnlyChips.length}명`;
+            document.getElementById("master-onlineonly-chips").innerHTML = tempOnlineOnlyChips.map((name, idx) => `
+                <span class="inline-flex items-center gap-1 bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-1 rounded-full text-xs font-bold">
+                    ${name}
+                    <button onclick="app.removePersonChip('onlineOnly', ${idx})" class="text-rose-400 hover:text-rose-600 font-extrabold">✕</button>
+                </span>
+            `).join("");
+        }
+
+        function addPersonChip(type) {
+            if (type === "interested") {
+                const input = document.getElementById("input-add-interested");
+                const val = input.value.trim();
+                if (val) {
+                    tempInterestedChips.push(val);
+                    input.value = "";
+                    renderMasterChips();
+                }
+            } else {
+                const input = document.getElementById("input-add-onlineonly");
+                const val = input.value.trim();
+                if (val) {
+                    tempOnlineOnlyChips.push(val);
+                    input.value = "";
+                    renderMasterChips();
+                }
+            }
+        }
+
+        function removePersonChip(type, index) {
+            if (type === "interested") {
+                tempInterestedChips.splice(index, 1);
+            } else {
+                tempOnlineOnlyChips.splice(index, 1);
+            }
+            renderMasterChips();
+        }
+
+        async function saveMasterPoolConfig() {
+            const publisherCount = Math.max(1, parseInt(document.getElementById("master-pub-count").value, 10) || 100);
+            const ref = doc(db, "months", state.currentMonth);
+            try {
+                await setDoc(ref, {
+                    publisherCount,
+                    interestedList: tempInterestedChips,
+                    onlineOnlyList: tempOnlineOnlyChips,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+                alert("회중 기준 인원 및 명단이 저장되었습니다.");
+                closeMasterModal();
+            } catch (err) {
+                alert("명단 저장 오류: " + err.message);
+            }
+        }
+
+        async function saveMasterPins() {
+            const newUserPin = document.getElementById("master-new-userpin").value.trim();
+            const newMasterPin = document.getElementById("master-new-masterpin").value.trim();
+            const updates = {};
+
+            if (newUserPin) {
+                if (!/^\d{4}$/.test(newUserPin)) { alert("일반 암호는 4자리 숫자여야 합니다."); return; }
+                updates.userPinHash = await sha256(newUserPin);
+            }
+            if (newMasterPin) {
+                if (!/^\d{4}$/.test(newMasterPin)) { alert("마스터 암호는 4자리 숫자여야 합니다."); return; }
+                updates.masterPinHash = await sha256(newMasterPin);
+            }
+
+            if (Object.keys(updates).length === 0) {
+                alert("변경할 새 4자리 암호를 입력해주세요.");
+                return;
+            }
+
+            updates.updatedAt = new Date().toISOString();
+            try {
+                await setDoc(doc(db, "settings", "auth"), updates, { merge: true });
+                if (updates.userPinHash) state.authHashes.userPinHash = updates.userPinHash;
+                if (updates.masterPinHash) {
+                    state.authHashes.masterPinHash = updates.masterPinHash;
+                    localStorage.setItem("meetcount_auth_v2", JSON.stringify({
+                        role: "master",
+                        pinHash: updates.masterPinHash,
+                        expiresAt: Date.now() + (24 * 60 * 60 * 1000)
+                    }));
+                }
+                document.getElementById("master-new-userpin").value = "";
+                document.getElementById("master-new-masterpin").value = "";
+                alert("암호가 안전하게 변경되었습니다.");
+            } catch (err) {
+                alert("암호 변경 오류: " + err.message);
+            }
+        }
+
+        async function resetCurrentSession() {
+            if (!confirm("정말 현재 회차의 모든 카운터 숫자를 0으로 초기화하시겠습니까?")) return;
+            const d = state.sessionData;
+            const resetDoc = createDefaultSessionDoc({
+                id: state.currentSessionId,
+                category: d.category,
+                defaultDate: d.defaultDate
+            });
+            resetDoc.subType = d.subType;
+            resetDoc.actualDate = d.actualDate;
+            resetDoc.note = d.note;
+
+            try {
+                await setDoc(doc(db, "months", state.currentMonth, "sessions", state.currentSessionId), resetDoc);
+                alert("현재 회차 숫자가 모두 0으로 초기화되었습니다.");
+                closeMasterModal();
+            } catch (err) {
+                alert("초기화 오류: " + err.message);
+            }
+        }
+
+        // 탭 전환
+        function switchTab(tab) {
+            ["counter", "visitors", "monthly"].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add("hidden");
+                document.getElementById(`tab-btn-${t}`).className = "touch-btn flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-600 transition";
+            });
+            document.getElementById(`tab-${tab}`).classList.remove("hidden");
+            document.getElementById(`tab-btn-${tab}`).className = "touch-btn flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold bg-white text-blue-700 shadow-sm transition";
+            if (tab === "monthly") renderMonthlyTables();
+        }
+
+        // 전역 객체 바인딩
+        window.app = {
+            pressPin, clearPin, submitPin, openPinSwitch,
+            onMonthChange, onSessionChange, switchTab,
+            addZone, setZoneDirect, toggleZoneCheck,
+            selectSeatZone, addSeatRow, undoSeatRow,
+            addOnlineScreen, undoOnlineScreen, adjustOnlineDirect, saveOnlineDirect,
+            addTemp, saveTempNote,
+            jumpToSession, copyCurrentReport, exportMonthlyCSV,
+            openMasterModal, closeMasterModal, onMasterSubtypeChange,
+            saveMasterSessionConfig, addPersonChip, removePersonChip,
+            saveMasterPoolConfig, saveMasterPins, resetCurrentSession
+        };
+
+        initApp();
+    </script>
+</body>
+</html>
